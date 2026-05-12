@@ -19,12 +19,16 @@ exports.handler = async function(event, context) {
     postUrl = body.postUrl;
     username = body.username;
   } catch (e) {
+    console.error('Body parse error:', e.message);
     return { statusCode: 400, headers, body: JSON.stringify({ error: 'Invalid request' }) };
   }
 
   if (!postUrl || typeof postUrl !== 'string') {
     return { statusCode: 400, headers, body: JSON.stringify({ error: 'postUrl is required' }) };
   }
+
+  console.log('API key present:', !!process.env.ANTHROPIC_API_KEY);
+  console.log('postUrl:', postUrl);
 
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -44,14 +48,17 @@ exports.handler = async function(event, context) {
       })
     });
 
+    console.log('Anthropic response status:', response.status);
+
     if (!response.ok) {
       const error = await response.json();
-      console.error('Anthropic API error:', error);
-      return { statusCode: 500, headers, body: JSON.stringify({ error: 'Extraction failed' }) };
+      console.error('Anthropic API error:', JSON.stringify(error));
+      return { statusCode: 500, headers, body: JSON.stringify({ error: 'Extraction failed', detail: error }) };
     }
 
     const data = await response.json();
     const text = data.content?.[0]?.text || '{}';
+    console.log('Extracted text:', text);
     const json = JSON.parse(text.replace(/```json|```/g, '').trim());
 
     return {
@@ -60,7 +67,7 @@ exports.handler = async function(event, context) {
       body: JSON.stringify({ extraction: json })
     };
   } catch (err) {
-    console.error('Function error:', err);
-    return { statusCode: 500, headers, body: JSON.stringify({ error: 'Something went wrong' }) };
+    console.error('Function error:', err.message, err.stack);
+    return { statusCode: 500, headers, body: JSON.stringify({ error: 'Something went wrong', detail: err.message }) };
   }
 };
