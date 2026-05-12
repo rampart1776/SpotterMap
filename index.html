@@ -130,8 +130,11 @@
       <div id="map-pin-area" id="map-pin-area">Click to place your pin on the map</div>
     </div>
 
-    <div class="field-label">Aircraft type <span style="color:#555">(optional — we'll try to detect it)</span></div>
-    <input class="field-input" id="aircraft-type" type="text" placeholder="e.g. B777, A380" />
+   <div class="field-label">Post text <span style="color:#555">(optional — paste your caption for auto-detection)</span></div>
+  <textarea class="field-input" id="post-text" rows="3" placeholder="Paste your post text here for automatic aircraft detection..."></textarea>
+
+  <div class="field-label">Aircraft type <span style="color:#555">(optional)</span></div>
+  <input class="field-input" id="aircraft-type" type="text" placeholder="e.g. B777, A380" />
 
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeModal()">Cancel</button>
@@ -295,15 +298,17 @@
   }
 
   // ---- AI EXTRACTION ----
-  document.getElementById('post-url').addEventListener('blur', async function() {
+ document.getElementById('post-url').addEventListener('blur', async function() {
   const url = this.value.trim();
   if (!url.includes('x.com') && !url.includes('twitter.com')) return;
   const username = url.split('/')[3];
+  const postText = document.getElementById('post-text').value.trim();
+  if (!postText) return;
   try {
     const res = await fetch('/.netlify/functions/extract', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ postUrl: url, username })
+      body: JSON.stringify({ postUrl: url, username, postText })
     });
     const data = await res.json();
     const json = data.extraction;
