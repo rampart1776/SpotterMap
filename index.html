@@ -296,34 +296,28 @@
 
   // ---- AI EXTRACTION ----
   document.getElementById('post-url').addEventListener('blur', async function() {
-    const url = this.value.trim();
-    if (!url.includes('x.com') && !url.includes('twitter.com')) return;
-    const username = url.split('/')[3];
-    const postText = `Post by @${username} on X/Twitter. URL: ${url}`;
-    try {
-      const res = await fetch('/.netlify/functions/extract', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ postUrl: url, username })
+  const url = this.value.trim();
+  if (!url.includes('x.com') && !url.includes('twitter.com')) return;
+  const username = url.split('/')[3];
+  try {
+    const res = await fetch('/.netlify/functions/extract', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ postUrl: url, username })
+    });
+    const data = await res.json();
+    const json = data.extraction;
+    const rows = Object.entries(json).filter(([k,v]) => v !== null && v !== false);
+    if (rows.length > 0) {
+      document.getElementById('extraction-rows').innerHTML = rows.map(([k,v]) =>
+        `<div class="ex-row"><span class="ex-label">${k}</span><span class="ex-value">${v}</span></div>`
+      ).join('');
+      document.getElementById('extraction-preview').style.display = 'block';
+      if (json.aircraft_type) document.getElementById('aircraft-type').value = json.aircraft_type;
+      if (json.airport_icao) document.getElementById('airport-code').value = json.airport_icao;
+    }
+  } catch(e) { console.log('Extraction skipped', e); }
 });
-const data = await res.json();
-const json = data.extraction;
-      });
-      const data = await res.json();
-      const text = data.content[0].text;
-      const json = JSON.parse(text.replace(/```json|```/g,'').trim());
-      const rows = Object.entries(json).filter(([k,v]) => v !== null && v !== false);
-      if (rows.length > 0) {
-        document.getElementById('extraction-rows').innerHTML = rows.map(([k,v]) =>
-          `<div class="ex-row"><span class="ex-label">${k}</span><span class="ex-value">${v}</span></div>`
-        ).join('');
-        document.getElementById('extraction-preview').style.display = 'block';
-        if (json.aircraft_type) document.getElementById('aircraft-type').value = json.aircraft_type;
-        if (json.airport_icao) document.getElementById('airport-code').value = json.airport_icao;
-      }
-    } catch(e) { console.log('Extraction skipped', e); }
-  });
-
   // ---- SUBMIT ----
   async function submitPin() {
     const url = document.getElementById('post-url').value.trim();
