@@ -301,17 +301,13 @@
     const username = url.split('/')[3];
     const postText = `Post by @${username} on X/Twitter. URL: ${url}`;
     try {
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-client-side-keys': 'true' },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 300,
-          messages: [{
-            role: 'user',
-            content: `Extract aviation details from this X post URL. The username is @${username}. Return ONLY a JSON object with these fields: aircraft_type (e.g. B777), airline, registration (tail number if present), airport_icao, is_video (boolean). Use null for anything not determinable from the URL alone. URL: ${url}`
-          }]
-        })
+      const res = await fetch('/.netlify/functions/extract', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ postUrl: url, username })
+});
+const data = await res.json();
+const json = data.extraction;
       });
       const data = await res.json();
       const text = data.content[0].text;
