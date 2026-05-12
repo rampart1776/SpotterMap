@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SpotterMap</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f1117; color: #f0f0f0; height: 100vh; display: flex; flex-direction: column; }
+
+    /* Top bar */
+    #topbar { display: flex; align-items: center; justify-content: space-between; padding: 10px 18px; background: #1a1d27; border-bottom: 1px solid #2a2d3a; z-index: 1000; }
+    #topbar .logo { font-size: 16px; font-weight: 600; color: #60a5fa; display: flex; align-items: center; gap: 8px; }
+    #topbar .logo span { font-size: 20px; }
+    #add-btn { background: #2563eb; color: white; border: none; padding: 7px 16px; border-radius: 20px; font-size: 13px; cursor: pointer; font-weight: 500; }
+    #add-btn:hover { background: #1d4ed8; }
+
+    /* Main layout */
+    #main { display: flex; flex: 1; overflow: hidden; }
+    #map { flex: 1; }
+
+    /* Side panel */
+    #side-panel { width: 300px; background: #1a1d27; border-left: 1px solid #2a2d3a; display: flex; flex-direction: column; overflow-y: auto; transition: transform 0.3s; }
+    #side-panel.hidden { display: none; }
+    #panel-close { background: none; border: none; color: #888; font-size: 18px; cursor: pointer; padding: 4px; }
+    #panel-header { display: flex; align-items: center; justify-content: space-between; padding: 14px; border-bottom: 1px solid #2a2d3a; }
+    #panel-title { font-size: 14px; font-weight: 500; }
+    #panel-subtitle { font-size: 12px; color: #888; margin-top: 2px; }
+    #panel-body { padding: 14px; flex: 1; }
+    #embed-container { background: #12151f; border-radius: 10px; padding: 12px; min-height: 120px; font-size: 13px; color: #888; display: flex; align-items: center; justify-content: center; }
+    .airport-badge { display: inline-flex; align-items: center; gap: 4px; background: #1e3a5f; color: #60a5fa; font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 4px; margin-top: 8px; }
+    .meta-row { font-size: 12px; color: #888; margin-top: 6px; }
+
+    /* Nearby airports */
+    #nearby { padding: 14px; border-top: 1px solid #2a2d3a; }
+    #nearby h4 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: #555; margin-bottom: 10px; }
+    .airport-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #1f2233; }
+    .airport-row:last-child { border-bottom: none; }
+    .airport-row .name { font-size: 12px; }
+    .airport-row .dist { font-size: 11px; color: #666; }
+    .icao-tag { font-size: 11px; background: #1a2e1a; color: #4ade80; padding: 2px 6px; border-radius: 3px; font-weight: 600; }
+
+    /* Submission modal */
+    #modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 2000; display: flex; align-items: center; justify-content: center; }
+    #modal-overlay.hidden { display: none; }
+    #modal { background: #1a1d27; border: 1px solid #2a2d3a; border-radius: 14px; padding: 24px; width: 380px; max-width: 95vw; }
+    #modal h2 { font-size: 16px; font-weight: 600; margin-bottom: 18px; }
+    .field-label { font-size: 12px; color: #888; margin-bottom: 5px; }
+    .field-input { width: 100%; background: #12151f; border: 1px solid #2a2d3a; border-radius: 8px; padding: 9px 12px; font-size: 13px; color: #f0f0f0; margin-bottom: 14px; outline: none; }
+    .field-input:focus { border-color: #2563eb; }
+    .loc-tabs { display: flex; gap: 8px; margin-bottom: 10px; }
+    .loc-tab { flex: 1; padding: 7px; border-radius: 8px; border: 1px solid #2a2d3a; font-size: 12px; text-align: center; cursor: pointer; color: #888; background: #12151f; }
+    .loc-tab.active { background: #1e3a5f; color: #60a5fa; border-color: #2563eb; }
+    #map-pin-area { background: #12151f; border: 1px solid #2a2d3a; border-radius: 8px; padding: 10px 12px; font-size: 12px; color: #888; margin-bottom: 14px; text-align: center; cursor: pointer; }
+    #map-pin-area.active { border-color: #2563eb; color: #60a5fa; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 4px; }
+    .btn-cancel { background: none; border: 1px solid #2a2d3a; color: #888; padding: 8px 16px; border-radius: 8px; font-size: 13px; cursor: pointer; }
+    .btn-submit { background: #2563eb; color: white; border: none; padding: 8px 20px; border-radius: 8px; font-size: 13px; cursor: pointer; font-weight: 500; }
+    .btn-submit:hover { background: #1d4ed8; }
+    .btn-submit:disabled { background: #333; color: #666; cursor: not-allowed; }
+
+    /* AI extraction preview */
+    #extraction-preview { background: #12151f; border: 1px solid #2a2d3a; border-radius: 8px; padding: 12px; margin-bottom: 14px; display: none; }
+    #extraction-preview h4 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #4ade80; margin-bottom: 8px; }
+    .ex-row { display: flex; justify-content: space-between; font-size: 12px; padding: 3px 0; }
+    .ex-label { color: #666; }
+    .ex-value { color: #f0f0f0; font-weight: 500; }
+
+    /* Toast */
+    #toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #1a2e1a; color: #4ade80; border: 1px solid #4ade80; padding: 10px 20px; border-radius: 20px; font-size: 13px; z-index: 3000; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+    #toast.show { opacity: 1; }
+  </style>
+</head>
+<body>
+
+<div id="topbar">
+  <div class="logo"><span>✈</span> SpotterMap</div>
+  <button id="add-btn">+ Add spot</button>
+</div>
+
+<div id="main">
+  <div id="map"></div>
+
+  <div id="side-panel" class="hidden">
+    <div id="panel-header">
+      <div>
+        <div id="panel-title">Loading...</div>
+        <div id="panel-subtitle"></div>
+      </div>
+      <button id="panel-close">✕</button>
+    </div>
+    <div id="panel-body">
+      <div id="embed-container">Loading post...</div>
+      <div id="panel-meta"></div>
+    </div>
+    <div id="nearby">
+      <h4>Nearby airports</h4>
+      <div id="nearby-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Submission modal -->
+<div id="modal-overlay" class="hidden">
+  <div id="modal">
+    <h2>✈ Add your spot</h2>
+
+    <div class="field-label">X post URL</div>
+    <input class="field-input" id="post-url" type="text" placeholder="https://x.com/username/status/..." />
+
+    <div id="extraction-preview">
+      <h4>✦ Detected from post</h4>
+      <div id="extraction-rows"></div>
+    </div>
+
+    <div class="field-label">Location</div>
+    <div class="loc-tabs">
+      <div class="loc-tab active" id="tab-airport" onclick="switchTab('airport')">🏢 Airport ID</div>
+      <div class="loc-tab" id="tab-pin" onclick="switchTab('pin')">📍 Drop a pin</div>
+    </div>
+
+    <div id="airport-input-area">
+      <input class="field-input" id="airport-code" type="text" placeholder="ICAO or IATA code e.g. EGLL, LAX" style="text-transform:uppercase" />
+    </div>
+
+    <div id="pin-input-area" style="display:none">
+      <div id="map-pin-area" id="map-pin-area">Click to place your pin on the map</div>
+    </div>
+
+    <div class="field-label">Aircraft type <span style="color:#555">(optional — we'll try to detect it)</span></div>
+    <input class="field-input" id="aircraft-type" type="text" placeholder="e.g. B777, A380" />
+
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-submit" id="submit-btn" onclick="submitPin()">Submit spot</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast">Spot submitted! ✈</div>
+
+<script>
+  // ---- CONFIG ----
+  const SUPABASE_URL = 'https://nwfgkingojvrprqcpmwu.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_Wd2_FuKusxwQ3FOpM7ZTOA_RK5wyg1o';
+ 
+
+  // ---- INIT ----
+  const { createClient } = supabase;
+  const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  const map = L.map('map').setView([30.0, 0.0], 3);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '© OpenStreetMap © CARTO',
+    maxZoom: 19
+  }).addTo(map);
+
+  let pins = [];
+  let pendingPin = null;
+  let locationTab = 'airport';
+  let droppedLat = null;
+  let droppedLng = null;
+  let droppedMarker = null;
+
+  // ---- LOAD PINS ----
+  async function loadPins() {
+    const { data, error } = await db.from('pins').select('*');
+    if (error) { console.error(error); return; }
+    data.forEach(addPinToMap);
+  }
+
+  function addPinToMap(pin) {
+    const marker = L.circleMarker([pin.lat, pin.lng], {
+      radius: 8,
+      fillColor: '#2563eb',
+      color: '#60a5fa',
+      weight: 1.5,
+      fillOpacity: 0.85
+    }).addTo(map);
+    marker.on('click', () => openPanel(pin));
+  }
+
+  // ---- SIDE PANEL ----
+  function openPanel(pin) {
+    document.getElementById('side-panel').classList.remove('hidden');
+    document.getElementById('panel-title').textContent =
+      (pin.airport_icao ? pin.airport_icao + ' · ' : '') + (pin.airline || 'Spotted aircraft');
+    document.getElementById('panel-subtitle').textContent =
+      '@' + (pin.x_username || 'unknown') + ' · ' + new Date(pin.submitted_at).toLocaleDateString();
+
+    const embedContainer = document.getElementById('embed-container');
+    embedContainer.innerHTML = '';
+    const tweetId = pin.x_post_url.split('/').pop().split('?')[0];
+    const blockquote = document.createElement('blockquote');
+    blockquote.className = 'twitter-tweet';
+    blockquote.setAttribute('data-theme', 'dark');
+    blockquote.innerHTML = `<a href="${pin.x_post_url}">Loading post...</a>`;
+    embedContainer.appendChild(blockquote);
+    if (window.twttr) {
+      window.twttr.widgets.load(embedContainer);
+    } else {
+      const script = document.createElement('script');
+      script.src = 'https://platform.twitter.com/widgets.js';
+      document.body.appendChild(script);
+    }
+
+    const meta = document.getElementById('panel-meta');
+    meta.innerHTML = '';
+    if (pin.airport_icao) meta.innerHTML += `<div class="airport-badge">🏢 ${pin.airport_icao}</div>`;
+    if (pin.aircraft_type) meta.innerHTML += `<div class="meta-row">✈ ${pin.aircraft_type}${pin.registration ? ' · ' + pin.registration : ''}</div>`;
+
+    loadNearbyAirports(pin.lat, pin.lng);
+  }
+
+  document.getElementById('panel-close').onclick = () => {
+    document.getElementById('side-panel').classList.add('hidden');
+  };
+
+  // ---- NEARBY AIRPORTS ----
+  async function loadNearbyAirports(lat, lng) {
+    const list = document.getElementById('nearby-list');
+    list.innerHTML = '<div style="font-size:12px;color:#555">Loading...</div>';
+    try {
+      const res = await fetch(`https://davidmegginson.github.io/ourairports-data/airports.csv`);
+      const text = await res.text();
+      const lines = text.split('\n').slice(1);
+      const airports = lines.map(l => {
+        const cols = l.split(',');
+        return { icao: cols[1]?.replace(/"/g,''), name: cols[3]?.replace(/"/g,''), lat: parseFloat(cols[4]), lng: parseFloat(cols[5]), type: cols[2]?.replace(/"/g,'') };
+      }).filter(a => a.lat && a.lng && ['large_airport','medium_airport'].includes(a.type));
+
+      const withDist = airports.map(a => ({
+        ...a,
+        dist: Math.round(haversine(lat, lng, a.lat, a.lng))
+      })).sort((a,b) => a.dist - b.dist).slice(0, 4);
+
+      list.innerHTML = withDist.map(a => `
+        <div class="airport-row">
+          <div>
+            <div class="name">${a.name}</div>
+            <div class="dist">${a.dist} mi away</div>
+          </div>
+          <div class="icao-tag">${a.icao}</div>
+        </div>`).join('');
+    } catch(e) {
+      list.innerHTML = '<div style="font-size:12px;color:#555">Could not load airports</div>';
+    }
+  }
+
+  function haversine(lat1, lng1, lat2, lng2) {
+    const R = 3958.8;
+    const dLat = (lat2-lat1) * Math.PI/180;
+    const dLng = (lng2-lng1) * Math.PI/180;
+    const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  }
+
+  // ---- MODAL ----
+  document.getElementById('add-btn').onclick = () => {
+    document.getElementById('modal-overlay').classList.remove('hidden');
+  };
+
+  function closeModal() {
+    document.getElementById('modal-overlay').classList.add('hidden');
+    document.getElementById('post-url').value = '';
+    document.getElementById('airport-code').value = '';
+    document.getElementById('aircraft-type').value = '';
+    document.getElementById('extraction-preview').style.display = 'none';
+    if (droppedMarker) { map.removeLayer(droppedMarker); droppedMarker = null; }
+    droppedLat = null; droppedLng = null;
+  }
+
+  function switchTab(tab) {
+    locationTab = tab;
+    document.getElementById('tab-airport').classList.toggle('active', tab === 'airport');
+    document.getElementById('tab-pin').classList.toggle('active', tab === 'pin');
+    document.getElementById('airport-input-area').style.display = tab === 'airport' ? 'block' : 'none';
+    document.getElementById('pin-input-area').style.display = tab === 'pin' ? 'block' : 'none';
+    if (tab === 'pin') {
+      closeModal();
+      document.getElementById('map-pin-area').classList.add('active');
+      document.getElementById('map-pin-area').textContent = 'Click anywhere on the map to drop your pin';
+      map.once('click', (e) => {
+        droppedLat = e.latlng.lat;
+        droppedLng = e.latlng.lng;
+        if (droppedMarker) map.removeLayer(droppedMarker);
+        droppedMarker = L.circleMarker([droppedLat, droppedLng], { radius: 8, fillColor: '#f59e0b', color: '#fbbf24', weight: 2, fillOpacity: 0.9 }).addTo(map);
+        document.getElementById('modal-overlay').classList.remove('hidden');
+        document.getElementById('map-pin-area').textContent = `📍 Pin placed at ${droppedLat.toFixed(4)}, ${droppedLng.toFixed(4)}`;
+      });
+    }
+  }
+
+  // ---- AI EXTRACTION ----
+  document.getElementById('post-url').addEventListener('blur', async function() {
+    const url = this.value.trim();
+    if (!url.includes('x.com') && !url.includes('twitter.com')) return;
+    const username = url.split('/')[3];
+    const postText = `Post by @${username} on X/Twitter. URL: ${url}`;
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-client-side-keys': 'true' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 300,
+          messages: [{
+            role: 'user',
+            content: `Extract aviation details from this X post URL. The username is @${username}. Return ONLY a JSON object with these fields: aircraft_type (e.g. B777), airline, registration (tail number if present), airport_icao, is_video (boolean). Use null for anything not determinable from the URL alone. URL: ${url}`
+          }]
+        })
+      });
+      const data = await res.json();
+      const text = data.content[0].text;
+      const json = JSON.parse(text.replace(/```json|```/g,'').trim());
+      const rows = Object.entries(json).filter(([k,v]) => v !== null && v !== false);
+      if (rows.length > 0) {
+        document.getElementById('extraction-rows').innerHTML = rows.map(([k,v]) =>
+          `<div class="ex-row"><span class="ex-label">${k}</span><span class="ex-value">${v}</span></div>`
+        ).join('');
+        document.getElementById('extraction-preview').style.display = 'block';
+        if (json.aircraft_type) document.getElementById('aircraft-type').value = json.aircraft_type;
+        if (json.airport_icao) document.getElementById('airport-code').value = json.airport_icao;
+      }
+    } catch(e) { console.log('Extraction skipped', e); }
+  });
+
+  // ---- SUBMIT ----
+  async function submitPin() {
+    const url = document.getElementById('post-url').value.trim();
+    if (!url) { alert('Please enter an X post URL'); return; }
+
+    let lat, lng, icao;
+
+    if (locationTab === 'airport') {
+      const code = document.getElementById('airport-code').value.trim().toUpperCase();
+      if (!code) { alert('Please enter an airport code'); return; }
+      const coords = await resolveAirport(code);
+      if (!coords) { alert('Airport not found. Try the ICAO code e.g. EGLL'); return; }
+      lat = coords.lat; lng = coords.lng; icao = code;
+    } else {
+      if (!droppedLat) { alert('Please drop a pin on the map first'); return; }
+      lat = droppedLat; lng = droppedLng;
+    }
+
+    const username = url.split('/')[3] || 'unknown';
+    const aircraftType = document.getElementById('aircraft-type').value.trim() || null;
+
+    document.getElementById('submit-btn').disabled = true;
+    document.getElementById('submit-btn').textContent = 'Submitting...';
+
+    const { error } = await db.from('pins').insert({
+      x_post_url: url,
+      lat, lng,
+      airport_icao: icao || null,
+      x_username: username,
+      aircraft_type: aircraftType
+    });
+
+    document.getElementById('submit-btn').disabled = false;
+    document.getElementById('submit-btn').textContent = 'Submit spot';
+
+    if (error) { alert('Something went wrong. Please try again.'); console.error(error); return; }
+
+    closeModal();
+    showToast();
+    loadPins();
+  }
+
+  async function resolveAirport(code) {
+    try {
+      const res = await fetch('https://davidmegginson.github.io/ourairports-data/airports.csv');
+      const text = await res.text();
+      const lines = text.split('\n').slice(1);
+      for (const line of lines) {
+        const cols = line.split(',');
+        const icao = cols[1]?.replace(/"/g,'');
+        const iata = cols[13]?.replace(/"/g,'');
+        if (icao === code || iata === code) {
+          return { lat: parseFloat(cols[4]), lng: parseFloat(cols[5]) };
+        }
+      }
+    } catch(e) { console.error(e); }
+    return null;
+  }
+
+  function showToast() {
+    const t = document.getElementById('toast');
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3000);
+  }
+
+  loadPins();
+</script>
+</body>
+</html>
