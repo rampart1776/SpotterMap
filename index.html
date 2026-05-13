@@ -6,7 +6,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>PlanePin</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -113,6 +116,14 @@
 
     #toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #1a2e1a; color: #4ade80; border: 1px solid #4ade80; padding: 10px 20px; border-radius: 20px; font-size: 13px; z-index: 3000; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
     #toast.show { opacity: 1; }
+
+    .plane-cluster { background: rgba(37,99,235,0.9); border: 2px solid #60a5fa; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; box-shadow: 0 0 0 4px rgba(37,99,235,0.2); }
+
+    .stats-control { background: rgba(26,29,39,0.88); border: 1px solid #2a2d3a; border-radius: 8px; padding: 5px 10px; font-size: 11px; color: #888; pointer-events: none; }
+    .stats-control span { color: #60a5fa; font-weight: 600; }
+
+    #share-x-btn { display: block; width: calc(100% - 28px); margin: 0 14px 14px; background: none; border: 1px solid #2a2d3a; color: #888; padding: 7px 14px; border-radius: 8px; font-size: 12px; cursor: pointer; text-align: center; font-family: inherit; }
+    #share-x-btn:hover { border-color: #60a5fa; color: #60a5fa; }
   </style>
 </head>
 <body>
@@ -150,6 +161,7 @@
       <div id="embed-container">Loading post...</div>
       <div id="panel-meta"></div>
     </div>
+    <button id="share-x-btn" onclick="shareToX()">Share on X</button>
     <div id="nearby">
       <h4>Nearby airports</h4>
       <div id="nearby-list"></div>
@@ -241,13 +253,24 @@
   }).addTo(map);
 
   let allPins = [];
-  let allMarkers = [];
+  let markerCluster = null;
+  let currentPin = null;
   let locationTab = 'airport';
   let droppedLat = null;
   let droppedLng = null;
   let droppedMarker = null;
   let activeMySpotsHandle = null;
   let lbCurrentTab = 'alltime';
+
+  const StatsControl = L.Control.extend({
+    options: { position: 'bottomleft' },
+    onAdd() {
+      const div = L.DomUtil.create('div', 'stats-control');
+      div.innerHTML = '<span id="stats-total">-</span> pins &nbsp;·&nbsp; <span id="stats-today">-</span> today';
+      return div;
+    }
+  });
+  new StatsControl().addTo(map);
 
   const filterDays = [7, 30, 90, 365, null];
   const filterLabels = ['Last 7 days', 'Last 30 days', 'Last 90 days', 'Last year', 'All time'];
@@ -257,6 +280,18 @@
     if (error) { console.error(error); return; }
     allPins = data;
     renderPins();
+    updateStats();
+  }
+
+  function updateStats() {
+    const total = allPins.length;
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const today = allPins.filter(p => new Date(p.submitted_at) >= todayStart).length;
+    const totalEl = document.getElementById('stats-total');
+    const todayEl = document.getElementById('stats-today');
+    if (totalEl) totalEl.textContent = total;
+    if (todayEl) todayEl.textContent = today;
   }
 
   function getPinAge(pin) {
@@ -274,8 +309,21 @@
   }
 
   function renderPins() {
-    allMarkers.forEach(m => map.removeLayer(m));
-    allMarkers = [];
+    if (markerCluster) map.removeLayer(markerCluster);
+
+    markerCluster = L.markerClusterGroup({
+      maxClusterRadius: 60,
+      iconCreateFunction(cluster) {
+        const n = cluster.getChildCount();
+        const size = n < 10 ? 34 : n < 100 ? 40 : 48;
+        return L.divIcon({
+          html: `<div class="plane-cluster" style="width:${size}px;height:${size}px">${n}</div>`,
+          className: '',
+          iconSize: [size, size],
+          iconAnchor: [size / 2, size / 2]
+        });
+      }
+    });
 
     const sliderVal = parseInt(document.getElementById('time-slider').value);
     const maxDays = filterDays[sliderVal];
@@ -297,10 +345,12 @@
         weight: 1.5,
         fillOpacity: style.fillOpacity,
         opacity: style.opacity
-      }).addTo(map);
+      });
       marker.on('click', () => openPanel(pin));
-      allMarkers.push(marker);
+      markerCluster.addLayer(marker);
     });
+
+    map.addLayer(markerCluster);
   }
 
   document.getElementById('time-slider').addEventListener('input', function() {
@@ -404,7 +454,19 @@
     `).join('');
   }
 
+  function shareToX() {
+    if (!currentPin) return;
+    const parts = [];
+    if (currentPin.aircraft_type) parts.push(currentPin.aircraft_type);
+    if (currentPin.airline) parts.push(currentPin.airline);
+    if (currentPin.airport_icao) parts.push('at ' + currentPin.airport_icao);
+    const desc = parts.length ? parts.join(' ') : 'aircraft spotted';
+    const text = `✈ ${desc} — spotted on @PlanePinApp\n\nplanepin.com`;
+    window.open('https://x.com/intent/tweet?text=' + encodeURIComponent(text), '_blank');
+  }
+
   function openPanel(pin) {
+    currentPin = pin;
     document.getElementById('leaderboard-panel').classList.add('hidden');
     document.getElementById('side-panel').classList.remove('hidden');
     document.getElementById('panel-title').textContent =
@@ -573,6 +635,7 @@
     closeModal();
     showToast();
     await loadPins();
+    updateStats();
     buildLeaderboard(lbCurrentTab);
   }
 
