@@ -18,6 +18,11 @@
     #add-btn { background: #2563eb; color: white; border: none; padding: 7px 16px; border-radius: 20px; font-size: 13px; cursor: pointer; font-weight: 500; }
     #add-btn:hover { background: #1d4ed8; }
 
+    /* Time filter */
+    #time-filter { display: flex; align-items: center; gap: 10px; }
+    #filter-label { font-size: 12px; color: #888; min-width: 90px; text-align: right; }
+    #time-slider { width: 100px; accent-color: #2563eb; cursor: pointer; }
+
     /* Main layout */
     #main { display: flex; flex: 1; overflow: hidden; }
     #map { flex: 1; }
@@ -49,8 +54,9 @@
     #modal { background: #1a1d27; border: 1px solid #2a2d3a; border-radius: 14px; padding: 24px; width: 380px; max-width: 95vw; }
     #modal h2 { font-size: 16px; font-weight: 600; margin-bottom: 18px; }
     .field-label { font-size: 12px; color: #888; margin-bottom: 5px; }
-    .field-input { width: 100%; background: #12151f; border: 1px solid #2a2d3a; border-radius: 8px; padding: 9px 12px; font-size: 13px; color: #f0f0f0; margin-bottom: 14px; outline: none; }
+    .field-input { width: 100%; background: #12151f; border: 1px solid #2a2d3a; border-radius: 8px; padding: 9px 12px; font-size: 13px; color: #f0f0f0; margin-bottom: 14px; outline: none; font-family: inherit; }
     .field-input:focus { border-color: #2563eb; }
+    textarea.field-input { resize: vertical; }
     .loc-tabs { display: flex; gap: 8px; margin-bottom: 10px; }
     .loc-tab { flex: 1; padding: 7px; border-radius: 8px; border: 1px solid #2a2d3a; font-size: 12px; text-align: center; cursor: pointer; color: #888; background: #12151f; }
     .loc-tab.active { background: #1e3a5f; color: #60a5fa; border-color: #2563eb; }
@@ -78,6 +84,10 @@
 
 <div id="topbar">
   <div class="logo"><span>✈</span> SpotterMap</div>
+  <div id="time-filter">
+    <span id="filter-label">Last 30 days</span>
+    <input type="range" id="time-slider" min="0" max="4" step="1" value="1" />
+  </div>
   <button id="add-btn">+ Add spot</button>
 </div>
 
@@ -111,6 +121,9 @@
     <div class="field-label">X post URL</div>
     <input class="field-input" id="post-url" type="text" placeholder="https://x.com/username/status/..." />
 
+    <div class="field-label">Post text <span style="color:#555">(optional — paste your caption for auto-detection)</span></div>
+    <textarea class="field-input" id="post-text" rows="3" placeholder="Paste your post text here for automatic aircraft detection..."></textarea>
+
     <div id="extraction-preview">
       <h4>✦ Detected from post</h4>
       <div id="extraction-rows"></div>
@@ -127,14 +140,11 @@
     </div>
 
     <div id="pin-input-area" style="display:none">
-      <div id="map-pin-area" id="map-pin-area">Click to place your pin on the map</div>
+      <div id="map-pin-area">Click to place your pin on the map</div>
     </div>
 
-   <div class="field-label">Post text <span style="color:#555">(optional — paste your caption for auto-detection)</span></div>
-  <textarea class="field-input" id="post-text" rows="3" placeholder="Paste your post text here for automatic aircraft detection..."></textarea>
-
-  <div class="field-label">Aircraft type <span style="color:#555">(optional)</span></div>
-  <input class="field-input" id="aircraft-type" type="text" placeholder="e.g. B777, A380" />
+    <div class="field-label">Aircraft type <span style="color:#555">(optional)</span></div>
+    <input class="field-input" id="aircraft-type" type="text" placeholder="e.g. B777, A380" />
 
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeModal()">Cancel</button>
@@ -149,7 +159,6 @@
   // ---- CONFIG ----
   const SUPABASE_URL = 'https://nwfgkingojvrprqcpmwu.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_Wd2_FuKusxwQ3FOpM7ZTOA_RK5wyg1o';
- 
 
   // ---- INIT ----
   const { createClient } = supabase;
@@ -161,30 +170,66 @@
     maxZoom: 19
   }).addTo(map);
 
-  let pins = [];
-  let pendingPin = null;
+  let allPins = [];
+  let allMarkers = [];
   let locationTab = 'airport';
   let droppedLat = null;
   let droppedLng = null;
   let droppedMarker = null;
 
+  const filterDays = [7, 30, 90, 365, null];
+  const filterLabels = ['Last 7 days', 'Last 30 days', 'Last 90 days', 'Last year', 'All time'];
+
   // ---- LOAD PINS ----
   async function loadPins() {
     const { data, error } = await db.from('pins').select('*');
     if (error) { console.error(error); return; }
-    data.forEach(addPinToMap);
+    allPins = data;
+    renderPins();
   }
 
-  function addPinToMap(pin) {
-    const marker = L.circleMarker([pin.lat, pin.lng], {
-      radius: 8,
-      fillColor: '#2563eb',
-      color: '#60a5fa',
-      weight: 1.5,
-      fillOpacity: 0.85
-    }).addTo(map);
-    marker.on('click', () => openPanel(pin));
+  function getPinAge(pin) {
+    return (Date.now() - new Date(pin.submitted_at)) / (1000 * 60 * 60 * 24);
   }
+
+  function getPinStyle(ageDays) {
+    if (ageDays <= 7)   return { radius: 9, fillOpacity: 0.95, opacity: 1.0 };
+    if (ageDays <= 30)  return { radius: 8, fillOpacity: 0.75, opacity: 0.85 };
+    if (ageDays <= 90)  return { radius: 7, fillOpacity: 0.55, opacity: 0.65 };
+    if (ageDays <= 365) return { radius: 6, fillOpacity: 0.35, opacity: 0.45 };
+    return                     { radius: 5, fillOpacity: 0.2,  opacity: 0.3  };
+  }
+
+  function renderPins() {
+    allMarkers.forEach(m => map.removeLayer(m));
+    allMarkers = [];
+
+    const sliderVal = parseInt(document.getElementById('time-slider').value);
+    const maxDays = filterDays[sliderVal];
+
+    allPins.forEach(pin => {
+      const ageDays = getPinAge(pin);
+      if (maxDays !== null && ageDays > maxDays) return;
+
+      const style = getPinStyle(ageDays);
+      const marker = L.circleMarker([pin.lat, pin.lng], {
+        radius: style.radius,
+        fillColor: '#2563eb',
+        color: '#60a5fa',
+        weight: 1.5,
+        fillOpacity: style.fillOpacity,
+        opacity: style.opacity
+      }).addTo(map);
+      marker.on('click', () => openPanel(pin));
+      allMarkers.push(marker);
+    });
+  }
+
+  document.getElementById('time-slider').addEventListener('input', function() {
+    const sliderVal = parseInt(this.value);
+    document.getElementById('filter-label').textContent = filterLabels[sliderVal];
+    renderPins();
+  });
 
   // ---- SIDE PANEL ----
   function openPanel(pin) {
@@ -196,7 +241,6 @@
 
     const embedContainer = document.getElementById('embed-container');
     embedContainer.innerHTML = '';
-    const tweetId = pin.x_post_url.split('/').pop().split('?')[0];
     const blockquote = document.createElement('blockquote');
     blockquote.className = 'twitter-tweet';
     blockquote.setAttribute('data-theme', 'dark');
@@ -227,7 +271,7 @@
     const list = document.getElementById('nearby-list');
     list.innerHTML = '<div style="font-size:12px;color:#555">Loading...</div>';
     try {
-      const res = await fetch(`https://davidmegginson.github.io/ourairports-data/airports.csv`);
+      const res = await fetch('https://davidmegginson.github.io/ourairports-data/airports.csv');
       const text = await res.text();
       const lines = text.split('\n').slice(1);
       const airports = lines.map(l => {
@@ -299,31 +343,32 @@
   }
 
   // ---- AI EXTRACTION ----
- document.getElementById('post-text').addEventListener('blur', async function() {
-  const url = document.getElementById('post-url').value.trim();
-  if (!url.includes('x.com') && !url.includes('twitter.com')) return;
-  const username = url.split('/')[3];
-  const postText = document.getElementById('post-text').value.trim();
-  if (!postText) return;
-  try {
-    const res = await fetch('/.netlify/functions/extract', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ postUrl: url, username, postText })
-    });
-    const data = await res.json();
-    const json = data.extraction;
-    const rows = Object.entries(json).filter(([k,v]) => v !== null && v !== false);
-    if (rows.length > 0) {
-      document.getElementById('extraction-rows').innerHTML = rows.map(([k,v]) =>
-        `<div class="ex-row"><span class="ex-label">${k}</span><span class="ex-value">${v}</span></div>`
-      ).join('');
-      document.getElementById('extraction-preview').style.display = 'block';
-      if (json.aircraft_type) document.getElementById('aircraft-type').value = json.aircraft_type;
-      if (json.airport_icao) document.getElementById('airport-code').value = json.airport_icao;
-    }
-  } catch(e) { console.log('Extraction skipped', e); }
-});
+  document.getElementById('post-text').addEventListener('blur', async function() {
+    const url = document.getElementById('post-url').value.trim();
+    if (!url.includes('x.com') && !url.includes('twitter.com')) return;
+    const username = url.split('/')[3];
+    const postText = this.value.trim();
+    if (!postText) return;
+    try {
+      const res = await fetch('/.netlify/functions/extract', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ postUrl: url, username, postText })
+      });
+      const data = await res.json();
+      const json = data.extraction;
+      const rows = Object.entries(json).filter(([k,v]) => v !== null && v !== false);
+      if (rows.length > 0) {
+        document.getElementById('extraction-rows').innerHTML = rows.map(([k,v]) =>
+          `<div class="ex-row"><span class="ex-label">${k}</span><span class="ex-value">${v}</span></div>`
+        ).join('');
+        document.getElementById('extraction-preview').style.display = 'block';
+        if (json.aircraft_type) document.getElementById('aircraft-type').value = json.aircraft_type;
+        if (json.airport_icao) document.getElementById('airport-code').value = json.airport_icao;
+      }
+    } catch(e) { console.log('Extraction skipped', e); }
+  });
+
   // ---- SUBMIT ----
   async function submitPin() {
     const url = document.getElementById('post-url').value.trim();
