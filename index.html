@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SpotterMap</title>
+  <title>PlanePin</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -83,12 +83,12 @@
 <body>
 
 <div id="topbar">
-  <div class="logo"><span>✈</span> SpotterMap</div>
+  <div class="logo"><span>✈</span> PlanePin</div>
   <div id="time-filter">
     <span id="filter-label">Last 30 days</span>
     <input type="range" id="time-slider" min="0" max="4" step="1" value="1" />
   </div>
-  <button id="add-btn">+ Add spot</button>
+  <button id="add-btn">+ Drop a pin</button>
 </div>
 
 <div id="main">
@@ -116,7 +116,7 @@
 <!-- Submission modal -->
 <div id="modal-overlay" class="hidden">
   <div id="modal">
-    <h2>✈ Add your spot</h2>
+    <h2>✈ Drop a PlanePin</h2>
 
     <div class="field-label">X post URL</div>
     <input class="field-input" id="post-url" type="text" placeholder="https://x.com/username/status/..." />
