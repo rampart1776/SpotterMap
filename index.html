@@ -298,8 +298,8 @@
   }
 
   // ---- AI EXTRACTION ----
- document.getElementById('post-url').addEventListener('blur', async function() {
-  const url = this.value.trim();
+ document.getElementById('post-text').addEventListener('blur', async function() {
+  const url = document.getElementById('post-url').value.trim();
   if (!url.includes('x.com') && !url.includes('twitter.com')) return;
   const username = url.split('/')[3];
   const postText = document.getElementById('post-text').value.trim();
