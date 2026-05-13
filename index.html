@@ -122,8 +122,9 @@
     .stats-control { background: rgba(26,29,39,0.88); border: 1px solid #2a2d3a; border-radius: 8px; padding: 5px 10px; font-size: 11px; color: #888; pointer-events: none; }
     .stats-control span { color: #60a5fa; font-weight: 600; }
 
-    #share-x-btn { display: block; width: calc(100% - 28px); margin: 0 14px 14px; background: none; border: 1px solid #2a2d3a; color: #888; padding: 7px 14px; border-radius: 8px; font-size: 12px; cursor: pointer; text-align: center; font-family: inherit; }
-    #share-x-btn:hover { border-color: #60a5fa; color: #60a5fa; }
+    #share-x-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: calc(100% - 28px); margin: 0 14px 14px; background: #000; border: none; color: #fff; padding: 11px 14px; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; text-align: center; font-family: inherit; letter-spacing: 0.01em; transition: background 0.15s; }
+    #share-x-btn:hover { background: #1a1a1a; }
+    #share-x-btn svg { flex-shrink: 0; }
   </style>
 </head>
 <body>
@@ -161,7 +162,10 @@
       <div id="embed-container">Loading post...</div>
       <div id="panel-meta"></div>
     </div>
-    <button id="share-x-btn" onclick="shareToX()">Share on X</button>
+    <button id="share-x-btn" onclick="shareToX()">
+      <svg width="16" height="16" viewBox="0 0 1200 1227" fill="white" xmlns="http://www.w3.org/2000/svg"><path d="M714.163 519.284L1160.89 0H1055.03L667.137 450.887L357.328 0H0L468.492 681.821L0 1226.37H105.866L515.491 750.218L842.672 1226.37H1200L714.163 519.284ZM569.165 687.828L521.697 619.934L144.011 79.6944H306.615L611.412 515.685L658.88 583.579L1055.08 1150.3H892.476L569.165 687.828Z"/></svg>
+      Share on X
+    </button>
     <div id="nearby">
       <h4>Nearby airports</h4>
       <div id="nearby-list"></div>
