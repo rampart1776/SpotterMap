@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -11,24 +12,26 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f1117; color: #f0f0f0; height: 100vh; display: flex; flex-direction: column; }
 
-    /* Top bar */
-    #topbar { display: flex; align-items: center; justify-content: space-between; padding: 10px 18px; background: #1a1d27; border-bottom: 1px solid #2a2d3a; z-index: 1000; }
+    #topbar { display: flex; align-items: center; justify-content: space-between; padding: 10px 18px; background: #1a1d27; border-bottom: 1px solid #2a2d3a; z-index: 1000; flex-wrap: wrap; gap: 8px; }
     #topbar .logo { font-size: 16px; font-weight: 600; color: #60a5fa; display: flex; align-items: center; gap: 8px; }
     #topbar .logo span { font-size: 20px; }
+    #topbar-right { display: flex; align-items: center; gap: 10px; }
     #add-btn { background: #2563eb; color: white; border: none; padding: 7px 16px; border-radius: 20px; font-size: 13px; cursor: pointer; font-weight: 500; }
     #add-btn:hover { background: #1d4ed8; }
+    #leaderboard-btn { background: none; border: 1px solid #2a2d3a; color: #888; padding: 7px 14px; border-radius: 20px; font-size: 13px; cursor: pointer; }
+    #leaderboard-btn:hover { border-color: #60a5fa; color: #60a5fa; }
+    #myspots-btn { background: none; border: 1px solid #2a2d3a; color: #888; padding: 7px 14px; border-radius: 20px; font-size: 13px; cursor: pointer; }
+    #myspots-btn:hover { border-color: #60a5fa; color: #60a5fa; }
+    #myspots-btn.active { border-color: #f59e0b; color: #f59e0b; background: rgba(245,158,11,0.1); }
 
-    /* Time filter */
     #time-filter { display: flex; align-items: center; gap: 10px; }
     #filter-label { font-size: 12px; color: #888; min-width: 90px; text-align: right; }
     #time-slider { width: 100px; accent-color: #2563eb; cursor: pointer; }
 
-    /* Main layout */
     #main { display: flex; flex: 1; overflow: hidden; }
     #map { flex: 1; }
 
-    /* Side panel */
-    #side-panel { width: 300px; background: #1a1d27; border-left: 1px solid #2a2d3a; display: flex; flex-direction: column; overflow-y: auto; transition: transform 0.3s; }
+    #side-panel { width: 300px; background: #1a1d27; border-left: 1px solid #2a2d3a; display: flex; flex-direction: column; overflow-y: auto; }
     #side-panel.hidden { display: none; }
     #panel-close { background: none; border: none; color: #888; font-size: 18px; cursor: pointer; padding: 4px; }
     #panel-header { display: flex; align-items: center; justify-content: space-between; padding: 14px; border-bottom: 1px solid #2a2d3a; }
@@ -39,7 +42,6 @@
     .airport-badge { display: inline-flex; align-items: center; gap: 4px; background: #1e3a5f; color: #60a5fa; font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 4px; margin-top: 8px; }
     .meta-row { font-size: 12px; color: #888; margin-top: 6px; }
 
-    /* Nearby airports */
     #nearby { padding: 14px; border-top: 1px solid #2a2d3a; }
     #nearby h4 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: #555; margin-bottom: 10px; }
     .airport-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #1f2233; }
@@ -48,7 +50,39 @@
     .airport-row .dist { font-size: 11px; color: #666; }
     .icao-tag { font-size: 11px; background: #1a2e1a; color: #4ade80; padding: 2px 6px; border-radius: 3px; font-weight: 600; }
 
-    /* Submission modal */
+    #leaderboard-panel { width: 300px; background: #1a1d27; border-left: 1px solid #2a2d3a; display: flex; flex-direction: column; overflow-y: auto; }
+    #leaderboard-panel.hidden { display: none; }
+    #leaderboard-header { display: flex; align-items: center; justify-content: space-between; padding: 14px; border-bottom: 1px solid #2a2d3a; }
+    #leaderboard-header h3 { font-size: 14px; font-weight: 500; }
+    #leaderboard-close { background: none; border: none; color: #888; font-size: 18px; cursor: pointer; padding: 4px; }
+    #leaderboard-tabs { display: flex; border-bottom: 1px solid #2a2d3a; }
+    .lb-tab { flex: 1; padding: 10px; font-size: 12px; text-align: center; cursor: pointer; color: #666; border-bottom: 2px solid transparent; }
+    .lb-tab.active { color: #60a5fa; border-bottom-color: #2563eb; }
+    #leaderboard-body { padding: 14px; flex: 1; }
+    .lb-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #1f2233; }
+    .lb-row:last-child { border-bottom: none; }
+    .lb-rank { font-size: 13px; font-weight: 600; color: #555; min-width: 22px; }
+    .lb-rank.gold { color: #f59e0b; }
+    .lb-rank.silver { color: #94a3b8; }
+    .lb-rank.bronze { color: #b45309; }
+    .lb-name { font-size: 13px; color: #f0f0f0; flex: 1; }
+    .lb-name a { color: #60a5fa; text-decoration: none; }
+    .lb-name a:hover { text-decoration: underline; }
+    .lb-count { font-size: 12px; color: #888; }
+    .lb-empty { font-size: 13px; color: #555; text-align: center; padding: 24px 0; }
+
+    #myspots-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 2000; display: flex; align-items: center; justify-content: center; }
+    #myspots-modal.hidden { display: none; }
+    #myspots-box { background: #1a1d27; border: 1px solid #2a2d3a; border-radius: 14px; padding: 24px; width: 340px; max-width: 95vw; }
+    #myspots-box h2 { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
+    #myspots-box p { font-size: 13px; color: #888; margin-bottom: 16px; }
+    #myspots-input { width: 100%; background: #12151f; border: 1px solid #2a2d3a; border-radius: 8px; padding: 9px 12px; font-size: 13px; color: #f0f0f0; outline: none; margin-bottom: 14px; font-family: inherit; }
+    #myspots-input:focus { border-color: #f59e0b; }
+    .myspots-actions { display: flex; justify-content: flex-end; gap: 10px; }
+    .btn-cancel { background: none; border: 1px solid #2a2d3a; color: #888; padding: 8px 16px; border-radius: 8px; font-size: 13px; cursor: pointer; }
+    .btn-filter { background: #f59e0b; color: #0f1117; border: none; padding: 8px 20px; border-radius: 8px; font-size: 13px; cursor: pointer; font-weight: 600; }
+    .btn-filter:hover { background: #d97706; }
+
     #modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 2000; display: flex; align-items: center; justify-content: center; }
     #modal-overlay.hidden { display: none; }
     #modal { background: #1a1d27; border: 1px solid #2a2d3a; border-radius: 14px; padding: 24px; width: 380px; max-width: 95vw; }
@@ -63,19 +97,20 @@
     #map-pin-area { background: #12151f; border: 1px solid #2a2d3a; border-radius: 8px; padding: 10px 12px; font-size: 12px; color: #888; margin-bottom: 14px; text-align: center; cursor: pointer; }
     #map-pin-area.active { border-color: #2563eb; color: #60a5fa; }
     .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 4px; }
-    .btn-cancel { background: none; border: 1px solid #2a2d3a; color: #888; padding: 8px 16px; border-radius: 8px; font-size: 13px; cursor: pointer; }
     .btn-submit { background: #2563eb; color: white; border: none; padding: 8px 20px; border-radius: 8px; font-size: 13px; cursor: pointer; font-weight: 500; }
     .btn-submit:hover { background: #1d4ed8; }
     .btn-submit:disabled { background: #333; color: #666; cursor: not-allowed; }
 
-    /* AI extraction preview */
     #extraction-preview { background: #12151f; border: 1px solid #2a2d3a; border-radius: 8px; padding: 12px; margin-bottom: 14px; display: none; }
     #extraction-preview h4 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #4ade80; margin-bottom: 8px; }
     .ex-row { display: flex; justify-content: space-between; font-size: 12px; padding: 3px 0; }
     .ex-label { color: #666; }
     .ex-value { color: #f0f0f0; font-weight: 500; }
 
-    /* Toast */
+    #myspots-banner { background: rgba(245,158,11,0.12); border-bottom: 1px solid rgba(245,158,11,0.3); padding: 8px 18px; font-size: 12px; color: #f59e0b; display: flex; align-items: center; justify-content: space-between; }
+    #myspots-banner.hidden { display: none; }
+    #myspots-banner button { background: none; border: none; color: #f59e0b; font-size: 12px; cursor: pointer; text-decoration: underline; }
+
     #toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #1a2e1a; color: #4ade80; border: 1px solid #4ade80; padding: 10px 20px; border-radius: 20px; font-size: 13px; z-index: 3000; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
     #toast.show { opacity: 1; }
   </style>
@@ -88,7 +123,16 @@
     <span id="filter-label">Last 30 days</span>
     <input type="range" id="time-slider" min="0" max="4" step="1" value="1" />
   </div>
-  <button id="add-btn">+ Drop a pin</button>
+  <div id="topbar-right">
+    <button id="myspots-btn" onclick="openMySpotsModal()">📍 My spots</button>
+    <button id="leaderboard-btn" onclick="toggleLeaderboard()">🏆 Top spotters</button>
+    <button id="add-btn">+ Drop a pin</button>
+  </div>
+</div>
+
+<div id="myspots-banner" class="hidden">
+  <span id="myspots-banner-text"></span>
+  <button onclick="clearMySpots()">Clear filter</button>
 </div>
 
 <div id="main">
@@ -109,6 +153,34 @@
     <div id="nearby">
       <h4>Nearby airports</h4>
       <div id="nearby-list"></div>
+    </div>
+  </div>
+
+  <div id="leaderboard-panel" class="hidden">
+    <div id="leaderboard-header">
+      <h3>🏆 Top spotters</h3>
+      <button id="leaderboard-close" onclick="toggleLeaderboard()">✕</button>
+    </div>
+    <div id="leaderboard-tabs">
+      <div class="lb-tab active" id="lb-tab-alltime" onclick="switchLbTab('alltime')">All time</div>
+      <div class="lb-tab" id="lb-tab-month" onclick="switchLbTab('month')">This month</div>
+      <div class="lb-tab" id="lb-tab-week" onclick="switchLbTab('week')">This week</div>
+    </div>
+    <div id="leaderboard-body">
+      <div class="lb-empty">Loading...</div>
+    </div>
+  </div>
+</div>
+
+<!-- My spots modal -->
+<div id="myspots-modal" class="hidden">
+  <div id="myspots-box">
+    <h2>📍 My spots</h2>
+    <p>Enter your X handle to highlight your pins on the map.</p>
+    <input id="myspots-input" type="text" placeholder="@yourhandle" />
+    <div class="myspots-actions">
+      <button class="btn-cancel" onclick="closeMySpotsModal()">Cancel</button>
+      <button class="btn-filter" onclick="applyMySpots()">Show my spots</button>
     </div>
   </div>
 </div>
@@ -153,14 +225,12 @@
   </div>
 </div>
 
-<div id="toast">Spot submitted! ✈</div>
+<div id="toast">PlanePin dropped! ✈</div>
 
 <script>
-  // ---- CONFIG ----
   const SUPABASE_URL = 'https://nwfgkingojvrprqcpmwu.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_Wd2_FuKusxwQ3FOpM7ZTOA_RK5wyg1o';
 
-  // ---- INIT ----
   const { createClient } = supabase;
   const db = createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -176,11 +246,12 @@
   let droppedLat = null;
   let droppedLng = null;
   let droppedMarker = null;
+  let activeMySpotsHandle = null;
+  let lbCurrentTab = 'alltime';
 
   const filterDays = [7, 30, 90, 365, null];
   const filterLabels = ['Last 7 days', 'Last 30 days', 'Last 90 days', 'Last year', 'All time'];
 
-  // ---- LOAD PINS ----
   async function loadPins() {
     const { data, error } = await db.from('pins').select('*');
     if (error) { console.error(error); return; }
@@ -192,12 +263,14 @@
     return (Date.now() - new Date(pin.submitted_at)) / (1000 * 60 * 60 * 24);
   }
 
-  function getPinStyle(ageDays) {
-    if (ageDays <= 7)   return { radius: 9, fillOpacity: 0.95, opacity: 1.0 };
-    if (ageDays <= 30)  return { radius: 8, fillOpacity: 0.75, opacity: 0.85 };
-    if (ageDays <= 90)  return { radius: 7, fillOpacity: 0.55, opacity: 0.65 };
-    if (ageDays <= 365) return { radius: 6, fillOpacity: 0.35, opacity: 0.45 };
-    return                     { radius: 5, fillOpacity: 0.2,  opacity: 0.3  };
+  function getPinStyle(ageDays, isHighlighted, isMySpotsDimmed) {
+    if (isMySpotsDimmed) return { radius: 6, fillColor: '#2a2d3a', color: '#3a3d4a', fillOpacity: 0.3, opacity: 0.3 };
+    if (isHighlighted)   return { radius: 11, fillColor: '#f59e0b', color: '#fbbf24', fillOpacity: 0.95, opacity: 1.0 };
+    if (ageDays <= 7)    return { radius: 9,  fillColor: '#2563eb', color: '#60a5fa', fillOpacity: 0.95, opacity: 1.0 };
+    if (ageDays <= 30)   return { radius: 8,  fillColor: '#2563eb', color: '#60a5fa', fillOpacity: 0.75, opacity: 0.85 };
+    if (ageDays <= 90)   return { radius: 7,  fillColor: '#2563eb', color: '#60a5fa', fillOpacity: 0.55, opacity: 0.65 };
+    if (ageDays <= 365)  return { radius: 6,  fillColor: '#2563eb', color: '#60a5fa', fillOpacity: 0.35, opacity: 0.45 };
+    return                      { radius: 5,  fillColor: '#2563eb', color: '#60a5fa', fillOpacity: 0.2,  opacity: 0.3  };
   }
 
   function renderPins() {
@@ -206,16 +279,21 @@
 
     const sliderVal = parseInt(document.getElementById('time-slider').value);
     const maxDays = filterDays[sliderVal];
+    const filterHandle = activeMySpotsHandle ? activeMySpotsHandle.replace('@','').toLowerCase() : null;
 
     allPins.forEach(pin => {
       const ageDays = getPinAge(pin);
       if (maxDays !== null && ageDays > maxDays) return;
 
-      const style = getPinStyle(ageDays);
+      const pinHandle = (pin.x_username || '').toLowerCase();
+      const isHighlighted = filterHandle && pinHandle === filterHandle;
+      const isMySpotsDimmed = filterHandle && !isHighlighted;
+
+      const style = getPinStyle(ageDays, isHighlighted, isMySpotsDimmed);
       const marker = L.circleMarker([pin.lat, pin.lng], {
         radius: style.radius,
-        fillColor: '#2563eb',
-        color: '#60a5fa',
+        fillColor: style.fillColor,
+        color: style.color,
         weight: 1.5,
         fillOpacity: style.fillOpacity,
         opacity: style.opacity
@@ -231,8 +309,103 @@
     renderPins();
   });
 
-  // ---- SIDE PANEL ----
+  function openMySpotsModal() {
+    document.getElementById('myspots-modal').classList.remove('hidden');
+    if (activeMySpotsHandle) {
+      document.getElementById('myspots-input').value = activeMySpotsHandle;
+    }
+  }
+
+  function closeMySpotsModal() {
+    document.getElementById('myspots-modal').classList.add('hidden');
+  }
+
+  function applyMySpots() {
+    const raw = document.getElementById('myspots-input').value.trim();
+    if (!raw) return;
+    const handle = raw.startsWith('@') ? raw : '@' + raw;
+    activeMySpotsHandle = handle;
+
+    const count = allPins.filter(p =>
+      (p.x_username||'').toLowerCase() === handle.replace('@','').toLowerCase()
+    ).length;
+
+    document.getElementById('myspots-banner-text').textContent =
+      `Showing ${count} pin${count !== 1 ? 's' : ''} by ${handle}`;
+    document.getElementById('myspots-banner').classList.remove('hidden');
+    document.getElementById('myspots-btn').classList.add('active');
+
+    closeMySpotsModal();
+    renderPins();
+
+    if (count > 0) {
+      const myPins = allPins.filter(p =>
+        (p.x_username||'').toLowerCase() === handle.replace('@','').toLowerCase()
+      );
+      map.fitBounds(myPins.map(p => [p.lat, p.lng]), { padding: [60, 60] });
+    }
+  }
+
+  function clearMySpots() {
+    activeMySpotsHandle = null;
+    document.getElementById('myspots-banner').classList.add('hidden');
+    document.getElementById('myspots-btn').classList.remove('active');
+    renderPins();
+  }
+
+  function toggleLeaderboard() {
+    const panel = document.getElementById('leaderboard-panel');
+    const isHidden = panel.classList.contains('hidden');
+    panel.classList.toggle('hidden');
+    if (isHidden) {
+      document.getElementById('side-panel').classList.add('hidden');
+      buildLeaderboard(lbCurrentTab);
+    }
+  }
+
+  function switchLbTab(tab) {
+    lbCurrentTab = tab;
+    document.querySelectorAll('.lb-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('lb-tab-' + tab).classList.add('active');
+    buildLeaderboard(tab);
+  }
+
+  function buildLeaderboard(tab) {
+    const body = document.getElementById('leaderboard-body');
+    body.innerHTML = '<div class="lb-empty">Loading...</div>';
+
+    const cutoffs = { alltime: null, month: 30, week: 7 };
+    const maxDays = cutoffs[tab];
+
+    const filtered = maxDays
+      ? allPins.filter(p => getPinAge(p) <= maxDays)
+      : allPins;
+
+    const counts = {};
+    filtered.forEach(p => {
+      const u = p.x_username || 'unknown';
+      counts[u] = (counts[u] || 0) + 1;
+    });
+
+    const sorted = Object.entries(counts).sort((a,b) => b[1] - a[1]).slice(0, 10);
+
+    if (sorted.length === 0) {
+      body.innerHTML = '<div class="lb-empty">No spots yet for this period</div>';
+      return;
+    }
+
+    const rankClasses = ['gold', 'silver', 'bronze'];
+    body.innerHTML = sorted.map(([username, count], i) => `
+      <div class="lb-row">
+        <div class="lb-rank ${rankClasses[i] || ''}">${i + 1}</div>
+        <div class="lb-name"><a href="https://x.com/${username}" target="_blank">@${username}</a></div>
+        <div class="lb-count">${count} pin${count !== 1 ? 's' : ''}</div>
+      </div>
+    `).join('');
+  }
+
   function openPanel(pin) {
+    document.getElementById('leaderboard-panel').classList.add('hidden');
     document.getElementById('side-panel').classList.remove('hidden');
     document.getElementById('panel-title').textContent =
       (pin.airport_icao ? pin.airport_icao + ' · ' : '') + (pin.airline || 'Spotted aircraft');
@@ -266,7 +439,6 @@
     document.getElementById('side-panel').classList.add('hidden');
   };
 
-  // ---- NEARBY AIRPORTS ----
   async function loadNearbyAirports(lat, lng) {
     const list = document.getElementById('nearby-list');
     list.innerHTML = '<div style="font-size:12px;color:#555">Loading...</div>';
@@ -280,16 +452,12 @@
       }).filter(a => a.lat && a.lng && ['large_airport','medium_airport'].includes(a.type));
 
       const withDist = airports.map(a => ({
-        ...a,
-        dist: Math.round(haversine(lat, lng, a.lat, a.lng))
+        ...a, dist: Math.round(haversine(lat, lng, a.lat, a.lng))
       })).sort((a,b) => a.dist - b.dist).slice(0, 4);
 
       list.innerHTML = withDist.map(a => `
         <div class="airport-row">
-          <div>
-            <div class="name">${a.name}</div>
-            <div class="dist">${a.dist} mi away</div>
-          </div>
+          <div><div class="name">${a.name}</div><div class="dist">${a.dist} mi away</div></div>
           <div class="icao-tag">${a.icao}</div>
         </div>`).join('');
     } catch(e) {
@@ -305,7 +473,6 @@
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
   }
 
-  // ---- MODAL ----
   document.getElementById('add-btn').onclick = () => {
     document.getElementById('modal-overlay').classList.remove('hidden');
   };
@@ -342,7 +509,6 @@
     }
   }
 
-  // ---- AI EXTRACTION ----
   document.getElementById('post-text').addEventListener('blur', async function() {
     const url = document.getElementById('post-url').value.trim();
     if (!url.includes('x.com') && !url.includes('twitter.com')) return;
@@ -369,7 +535,6 @@
     } catch(e) { console.log('Extraction skipped', e); }
   });
 
-  // ---- SUBMIT ----
   async function submitPin() {
     const url = document.getElementById('post-url').value.trim();
     if (!url) { alert('Please enter an X post URL'); return; }
@@ -391,24 +556,24 @@
     const aircraftType = document.getElementById('aircraft-type').value.trim() || null;
 
     document.getElementById('submit-btn').disabled = true;
-    document.getElementById('submit-btn').textContent = 'Submitting...';
+    document.getElementById('submit-btn').textContent = 'Dropping...';
 
     const { error } = await db.from('pins').insert({
-      x_post_url: url,
-      lat, lng,
+      x_post_url: url, lat, lng,
       airport_icao: icao || null,
       x_username: username,
       aircraft_type: aircraftType
     });
 
     document.getElementById('submit-btn').disabled = false;
-    document.getElementById('submit-btn').textContent = 'Submit spot';
+    document.getElementById('submit-btn').textContent = 'Drop pin';
 
     if (error) { alert('Something went wrong. Please try again.'); console.error(error); return; }
 
     closeModal();
     showToast();
-    loadPins();
+    await loadPins();
+    buildLeaderboard(lbCurrentTab);
   }
 
   async function resolveAirport(code) {
