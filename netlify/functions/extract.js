@@ -13,12 +13,13 @@ exports.handler = async function(event, context) {
     return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method not allowed' }) };
   }
 
-  let postUrl, username;
-  try {
-    const body = JSON.parse(event.body);
-    postUrl = body.postUrl;
-    username = body.username;
-  } catch (e) {
+ let postUrl, username, postText;
+try {
+  const body = JSON.parse(event.body);
+  postUrl = body.postUrl;
+  username = body.username;
+  postText = body.postText;
+} catch (e) {
     console.error('Body parse error:', e.message);
     return { statusCode: 400, headers, body: JSON.stringify({ error: 'Invalid request' }) };
   }
@@ -43,7 +44,7 @@ exports.handler = async function(event, context) {
         max_tokens: 300,
         messages: [{
           role: 'user',
-          content: `Extract aviation details from this X/Twitter post URL. The username is @${username}. Return ONLY a valid JSON object with these fields: aircraft_type (e.g. B777), airline, registration (tail number if present), airport_icao, is_video (boolean). Use null for anything not determinable. URL: ${postUrl}`
+          content: `Extract aviation details from this X/Twitter post. Return ONLY a valid JSON object with these fields: aircraft_type (e.g. B777), airline, registration (tail number if present), airport_icao, is_video (boolean). Use null for anything not mentioned. Post text: ${postText}`
         }]
       })
     });
