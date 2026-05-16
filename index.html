@@ -27,6 +27,22 @@
     #myspots-btn.active { border-color: #f59e0b; color: #f59e0b; background: rgba(245,158,11,0.1); }
     #help-btn { background: none; border: 1px solid #2a2d3a; color: #888; width: 32px; height: 32px; border-radius: 50%; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; }
     #help-btn:hover { border-color: #60a5fa; color: #60a5fa; }
+    #filter-btn { background: none; border: 1px solid #2a2d3a; color: #888; padding: 7px 14px; border-radius: 20px; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+    #filter-btn:hover { border-color: #60a5fa; color: #60a5fa; }
+    #filter-btn.active { border-color: #2563eb; color: #60a5fa; background: rgba(37,99,235,0.1); }
+    #filter-btn .filter-dot { width: 6px; height: 6px; border-radius: 50%; background: #2563eb; display: none; }
+    #filter-btn.active .filter-dot { display: inline-block; }
+
+    #filter-drawer { background: #13161f; border-bottom: 1px solid #2a2d3a; overflow: hidden; max-height: 0; transition: max-height 0.25s ease, padding 0.25s ease; }
+    #filter-drawer.open { max-height: 80px; }
+    #filter-drawer-inner { display: flex; align-items: center; gap: 20px; padding: 10px 18px; flex-wrap: wrap; }
+    .filter-group { display: flex; align-items: center; gap: 8px; }
+    .filter-label-text { font-size: 12px; color: #666; white-space: nowrap; }
+    .filter-group select { background: #1a1d27; border: 1px solid #2a2d3a; border-radius: 8px; color: #f0f0f0; font-size: 12px; padding: 5px 10px; cursor: pointer; outline: none; font-family: inherit; }
+    .filter-group select:focus { border-color: #2563eb; }
+    .filter-group select option { background: #1a1d27; }
+    #filter-clear-btn { background: none; border: 1px solid #3a2a2a; color: #f87171; font-size: 12px; padding: 5px 12px; border-radius: 8px; cursor: pointer; white-space: nowrap; font-family: inherit; }
+    #filter-clear-btn:hover { background: rgba(248,113,113,0.1); }
     
     #time-filter { display: flex; align-items: center; gap: 10px; }
     #filter-label { font-size: 12px; color: #888; min-width: 90px; text-align: right; }
@@ -153,6 +169,7 @@
     <input type="range" id="time-slider" min="0" max="4" step="1" value="1" />
   </div>
   <div id="topbar-right">
+    <button id="filter-btn" onclick="toggleFilterDrawer()"><span class="filter-dot"></span>⚙ Filters</button>
     <button id="myspots-btn" onclick="openMySpotsModal()">📍 My spots</button>
     <button id="leaderboard-btn" onclick="toggleLeaderboard()">🏆 Top spotters</button>
    <button id="add-btn">+ Drop a pin</button>
@@ -160,7 +177,25 @@
   </div>
 </div>
 
-<div id="myspots-banner" class="hidden">
+<!-- Filter drawer -->
+<div id="filter-drawer" class="hidden">
+  <div id="filter-drawer-inner">
+    <div class="filter-group">
+      <label class="filter-label-text">✈ Aircraft type</label>
+      <select id="filter-aircraft" onchange="applyFilters()">
+        <option value="">All aircraft</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label class="filter-label-text">🏢 Airport</label>
+      <select id="filter-airport" onchange="applyFilters()">
+        <option value="">All airports</option>
+      </select>
+    </div>
+    <button id="filter-clear-btn" class="hidden" onclick="clearFilters()">✕ Clear filters</button>
+  </div>
+</div>
+  <div id="myspots-banner" class="hidden">
   <span id="myspots-banner-text"></span>
   <button onclick="clearMySpots()">Clear filter</button>
 </div>
@@ -335,6 +370,7 @@
     allPins = data;
     renderPins();
     updateStats();
+    populateFilterDropdowns();
   }
 
   function updateStats() {
@@ -386,6 +422,8 @@
     allPins.forEach(pin => {
       const ageDays = getPinAge(pin);
       if (maxDays !== null && ageDays > maxDays) return;
+      if (activeAircraftFilter && (pin.aircraft_type || '').toUpperCase() !== activeAircraftFilter) return;
+      if (activeAirportFilter && (pin.airport_icao || '').toUpperCase() !== activeAirportFilter) return;
 
       const pinHandle = (pin.x_username || '').toLowerCase();
       const isHighlighted = filterHandle && pinHandle === filterHandle;
@@ -798,6 +836,62 @@
     document.getElementById('map-pin-area').textContent = `📍 Pin placed at ${droppedLat.toFixed(4)}, ${droppedLng.toFixed(4)}`;
   });
 
+// Filter drawer
+  let activeAircraftFilter = '';
+  let activeAirportFilter = '';
+
+  function toggleFilterDrawer() {
+    const drawer = document.getElementById('filter-drawer');
+    const btn = document.getElementById('filter-btn');
+    const isOpen = drawer.classList.contains('open');
+    drawer.classList.toggle('open', !isOpen);
+    drawer.classList.toggle('hidden', false);
+    btn.classList.toggle('active', !isOpen);
+  }
+
+  function populateFilterDropdowns() {
+    const aircraftSet = new Set();
+    const airportSet = new Set();
+    allPins.forEach(p => {
+      if (p.aircraft_type) aircraftSet.add(p.aircraft_type.toUpperCase());
+      if (p.airport_icao) airportSet.add(p.airport_icao.toUpperCase());
+    });
+
+    const aircraftSelect = document.getElementById('filter-aircraft');
+    const airportSelect = document.getElementById('filter-airport');
+
+    // Preserve current selection
+    const prevAircraft = aircraftSelect.value;
+    const prevAirport = airportSelect.value;
+
+    aircraftSelect.innerHTML = '<option value="">All aircraft</option>' +
+      [...aircraftSet].sort().map(v => `<option value="${v}">${v}</option>`).join('');
+    airportSelect.innerHTML = '<option value="">All airports</option>' +
+      [...airportSet].sort().map(v => `<option value="${v}">${v}</option>`).join('');
+
+    aircraftSelect.value = prevAircraft;
+    airportSelect.value = prevAirport;
+  }
+
+  function applyFilters() {
+    activeAircraftFilter = document.getElementById('filter-aircraft').value;
+    activeAirportFilter = document.getElementById('filter-airport').value;
+    const anyActive = activeAircraftFilter || activeAirportFilter;
+    document.getElementById('filter-btn').classList.toggle('active', !!anyActive);
+    document.getElementById('filter-clear-btn').classList.toggle('hidden', !anyActive);
+    renderPins();
+  }
+
+  function clearFilters() {
+    activeAircraftFilter = '';
+    activeAirportFilter = '';
+    document.getElementById('filter-aircraft').value = '';
+    document.getElementById('filter-airport').value = '';
+    document.getElementById('filter-btn').classList.remove('active');
+    document.getElementById('filter-clear-btn').classList.add('hidden');
+    renderPins();
+  }
+  
   // Welcome modal
   function showWelcome() {
     if (localStorage.getItem('planepinWelcomeSeen') === 'true') return;
