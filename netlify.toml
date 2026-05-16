@@ -3,3 +3,8 @@
 
 [build.environment]
   NODE_VERSION = "18"
+
+[[redirects]]
+  from = "/pin/*"
+  to = "/index.html"
+  status = 200
