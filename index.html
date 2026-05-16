@@ -543,6 +543,12 @@
   }
 
   document.getElementById('add-btn').onclick = () => {
+    // Always reset to airport tab on open
+    locationTab = 'airport';
+    document.getElementById('tab-airport').classList.add('active');
+    document.getElementById('tab-pin').classList.remove('active');
+    document.getElementById('airport-input-area').style.display = 'block';
+    document.getElementById('pin-input-area').style.display = 'none';
     document.getElementById('modal-overlay').classList.remove('hidden');
   };
 
@@ -555,6 +561,14 @@
     document.getElementById('extraction-preview').style.display = 'none';
     if (droppedMarker) { map.removeLayer(droppedMarker); droppedMarker = null; }
     droppedLat = null; droppedLng = null;
+    // Reset location tab to airport default
+    locationTab = 'airport';
+    document.getElementById('tab-airport').classList.add('active');
+    document.getElementById('tab-pin').classList.remove('active');
+    document.getElementById('airport-input-area').style.display = 'block';
+    document.getElementById('pin-input-area').style.display = 'none';
+    document.getElementById('map-pin-area').classList.remove('active');
+    document.getElementById('map-pin-area').textContent = 'Click to place your pin on the map';
   }
 
  function switchTab(tab) {
@@ -634,7 +648,19 @@
         ).join('');
         document.getElementById('extraction-preview').style.display = 'block';
         if (json.aircraft_type) document.getElementById('aircraft-type').value = json.aircraft_type;
-        if (json.airport_icao) document.getElementById('airport-code').value = json.airport_icao;
+        if (json.airport_icao) {
+          document.getElementById('airport-code').value = json.airport_icao;
+          // Ensure airport tab is active and briefly highlight the field
+          locationTab = 'airport';
+          document.getElementById('tab-airport').classList.add('active');
+          document.getElementById('tab-pin').classList.remove('active');
+          document.getElementById('airport-input-area').style.display = 'block';
+          document.getElementById('pin-input-area').style.display = 'none';
+          const airportField = document.getElementById('airport-code');
+          airportField.style.borderColor = '#4ade80';
+          airportField.style.transition = 'border-color 1.5s';
+          setTimeout(() => { airportField.style.borderColor = ''; }, 2500);
+        }
       }
     } catch(e) { console.log('Extraction skipped', e); }
   });
