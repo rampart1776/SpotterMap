@@ -364,13 +364,14 @@
   const filterDays = [7, 30, 90, 365, null];
   const filterLabels = ['Last 7 days', 'Last 30 days', 'Last 90 days', 'Last year', 'All time'];
 
-  async function loadPins() {
+ async function loadPins() {
     const { data, error } = await db.from('pins').select('*');
     if (error) { console.error(error); return; }
     allPins = data;
     renderPins();
     updateStats();
     populateFilterDropdowns();
+    checkDeepLink();
   }
 
   function updateStats() {
@@ -546,21 +547,30 @@
     `).join('');
   }
 
-  function shareToX() {
+ function shareToX() {
     if (!currentPin) return;
     const parts = [];
     if (currentPin.aircraft_type) parts.push(currentPin.aircraft_type);
     if (currentPin.airline) parts.push(currentPin.airline);
     if (currentPin.airport_icao) parts.push('at ' + currentPin.airport_icao);
     const desc = parts.length ? parts.join(' ') : 'aircraft spotted';
-    const text = `✈ ${desc} — spotted on @PlanePinApp\n\nplanepin.com`;
+    const pinUrl = `https://planepin.com/pin/${currentPin.id}`;
+    const text = `✈ ${desc} — spotted on @PlanePinApp\n\n${pinUrl}`;
     window.open('https://x.com/intent/tweet?text=' + encodeURIComponent(text), '_blank');
   }
 
-  function openPanel(pin) {
+  function openPanel(pin, fromDeepLink = false) {
     currentPin = pin;
     document.getElementById('leaderboard-panel').classList.add('hidden');
     document.getElementById('side-panel').classList.remove('hidden');
+
+    // Update URL without reloading
+    history.pushState({ pinId: pin.id }, '', `/pin/${pin.id}`);
+
+    // Center map on pin, zoom to regional level unless arriving from deep link (already handled)
+    if (!fromDeepLink) {
+      map.setView([pin.lat, pin.lng], 6, { animate: true });
+    }
     document.getElementById('panel-title').textContent =
       (pin.airport_icao ? pin.airport_icao + ' · ' : '') + (pin.airline || 'Spotted aircraft');
     document.getElementById('panel-subtitle').textContent =
@@ -589,8 +599,10 @@
     loadNearbyAirports(pin.lat, pin.lng);
   }
 
-  document.getElementById('panel-close').onclick = () => {
+ document.getElementById('panel-close').onclick = () => {
     document.getElementById('side-panel').classList.add('hidden');
+    history.pushState({}, '', '/');
+    currentPin = null;
   };
 
   async function loadNearbyAirports(lat, lng) {
@@ -891,6 +903,32 @@
     document.getElementById('filter-clear-btn').classList.add('hidden');
     renderPins();
   }
+
+// Deep link handling
+  function checkDeepLink() {
+    const match = window.location.pathname.match(/^\/pin\/([a-f0-9-]+)$/i);
+    if (!match) return;
+    const pinId = match[1];
+    const pin = allPins.find(p => p.id === pinId);
+    if (!pin) {
+      console.warn('Pin not found:', pinId);
+      return;
+    }
+    // Zoom to region first, then open panel
+    map.setView([pin.lat, pin.lng], 6, { animate: false });
+    openPanel(pin, true);
+  }
+
+  // Handle browser back/forward
+  window.addEventListener('popstate', (e) => {
+    if (e.state && e.state.pinId) {
+      const pin = allPins.find(p => p.id === e.state.pinId);
+      if (pin) openPanel(pin, true);
+    } else {
+      document.getElementById('side-panel').classList.add('hidden');
+      currentPin = null;
+    }
+  });
   
   // Welcome modal
   function showWelcome() {
