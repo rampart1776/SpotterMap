@@ -139,6 +139,11 @@
     .stats-control { background: rgba(26,29,39,0.88); border: 1px solid #2a2d3a; border-radius: 8px; padding: 5px 10px; font-size: 11px; color: #888; pointer-events: none; }
     .stats-control span { color: #60a5fa; font-weight: 600; }
 
+    #zoom-control { position: fixed; right: 18px; top: 50%; transform: translateY(-50%); z-index: 1000; display: flex; flex-direction: column; align-items: center; gap: 6px; background: rgba(26,29,39,0.92); border: 1px solid #2a2d3a; border-radius: 12px; padding: 10px 8px; }
+    #zoom-in-btn, #zoom-out-btn { background: none; border: none; color: #888; font-size: 18px; font-weight: 700; cursor: pointer; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 6px; line-height: 1; }
+    #zoom-in-btn:hover, #zoom-out-btn:hover { background: #2a2d3a; color: #60a5fa; }
+    #zoom-slider { -webkit-appearance: slider-vertical; appearance: slider-vertical; writing-mode: vertical-lr; direction: rtl; width: 6px; height: 120px; accent-color: #2563eb; cursor: pointer; background: transparent; }
+    
     #share-x-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: calc(100% - 28px); margin: 0 14px 14px; background: #000; border: none; color: #fff; padding: 11px 14px; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; text-align: center; font-family: inherit; letter-spacing: 0.01em; transition: background 0.15s; }
     #share-x-btn:hover { background: #1a1a1a; }
     #share-x-btn svg { flex-shrink: 0; }
@@ -320,6 +325,13 @@
     </div>
     <button id="welcome-btn" onclick="closeWelcome()">Let's go ✈</button>
   </div>
+</div>
+
+<!-- Zoom slider -->
+<div id="zoom-control">
+  <button id="zoom-in-btn" onclick="zoomStep(1)" title="Zoom in">+</button>
+  <input type="range" id="zoom-slider" min="2" max="18" step="1" value="3" orient="vertical" />
+  <button id="zoom-out-btn" onclick="zoomStep(-1)" title="Zoom out">−</button>
 </div>
   
   <div id="toast">PlanePin dropped! ✈</div>
@@ -847,6 +859,21 @@
     document.getElementById('map-pin-area').classList.add('active');
     document.getElementById('map-pin-area').textContent = `📍 Pin placed at ${droppedLat.toFixed(4)}, ${droppedLng.toFixed(4)}`;
   });
+
+// Zoom slider
+  const zoomSlider = document.getElementById('zoom-slider');
+
+  zoomSlider.addEventListener('input', function() {
+    map.setZoom(parseInt(this.value), { animate: true });
+  });
+
+  map.on('zoomend', function() {
+    zoomSlider.value = map.getZoom();
+  });
+
+  function zoomStep(delta) {
+    map.setZoom(map.getZoom() + delta, { animate: true });
+  }
 
 // Filter drawer
   let activeAircraftFilter = '';
