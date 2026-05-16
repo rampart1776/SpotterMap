@@ -25,7 +25,9 @@
     #myspots-btn { background: none; border: 1px solid #2a2d3a; color: #888; padding: 7px 14px; border-radius: 20px; font-size: 13px; cursor: pointer; }
     #myspots-btn:hover { border-color: #60a5fa; color: #60a5fa; }
     #myspots-btn.active { border-color: #f59e0b; color: #f59e0b; background: rgba(245,158,11,0.1); }
-
+    #help-btn { background: none; border: 1px solid #2a2d3a; color: #888; width: 32px; height: 32px; border-radius: 50%; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    #help-btn:hover { border-color: #60a5fa; color: #60a5fa; }
+    
     #time-filter { display: flex; align-items: center; gap: 10px; }
     #filter-label { font-size: 12px; color: #888; min-width: 90px; text-align: right; }
     #time-slider { width: 100px; accent-color: #2563eb; cursor: pointer; }
@@ -124,6 +126,22 @@
     #share-x-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: calc(100% - 28px); margin: 0 14px 14px; background: #000; border: none; color: #fff; padding: 11px 14px; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; text-align: center; font-family: inherit; letter-spacing: 0.01em; transition: background 0.15s; }
     #share-x-btn:hover { background: #1a1a1a; }
     #share-x-btn svg { flex-shrink: 0; }
+    #welcome-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 3000; display: flex; align-items: center; justify-content: center; }
+    #welcome-overlay.hidden { display: none; }
+    #welcome-modal { background: #1a1d27; border: 1px solid #2a2d3a; border-radius: 16px; padding: 30px 28px 24px; width: 420px; max-width: 95vw; max-height: 90vh; overflow-y: auto; }
+    #welcome-icon { font-size: 32px; margin-bottom: 10px; }
+    #welcome-modal h2 { font-size: 20px; font-weight: 700; color: #f0f0f0; margin-bottom: 6px; }
+    #welcome-tagline { font-size: 14px; color: #60a5fa; font-weight: 500; margin-bottom: 14px; }
+    #welcome-intro { font-size: 13px; color: #aaa; line-height: 1.6; margin-bottom: 18px; border-bottom: 1px solid #2a2d3a; padding-bottom: 18px; }
+    .welcome-bullets { display: flex; flex-direction: column; gap: 14px; margin-bottom: 20px; }
+    .welcome-bullet { display: flex; gap: 12px; align-items: flex-start; font-size: 13px; color: #ccc; line-height: 1.6; }
+    .bullet-icon { font-size: 16px; margin-top: 1px; flex-shrink: 0; }
+    .welcome-bullet strong { color: #f0f0f0; }
+    #welcome-suppress { font-size: 12px; color: #666; margin-bottom: 18px; display: flex; align-items: center; gap: 8px; }
+    #welcome-suppress label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+    #welcome-suppress input[type="checkbox"] { accent-color: #2563eb; cursor: pointer; }
+    #welcome-btn { width: 100%; background: #2563eb; color: white; border: none; padding: 12px; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; font-family: inherit; transition: background 0.15s; }
+    #welcome-btn:hover { background: #1d4ed8; }
   </style>
 </head>
 <body>
@@ -137,7 +155,8 @@
   <div id="topbar-right">
     <button id="myspots-btn" onclick="openMySpotsModal()">📍 My spots</button>
     <button id="leaderboard-btn" onclick="toggleLeaderboard()">🏆 Top spotters</button>
-    <button id="add-btn">+ Drop a pin</button>
+   <button id="add-btn">+ Drop a pin</button>
+    <button id="help-btn" onclick="document.getElementById('welcome-overlay').classList.remove('hidden')" title="How PlanePin works">?</button>
   </div>
 </div>
 
@@ -240,7 +259,35 @@
   </div>
 </div>
 
-<div id="toast">PlanePin dropped! ✈</div>
+<!-- Welcome modal -->
+<div id="welcome-overlay" class="hidden">
+  <div id="welcome-modal">
+    <div id="welcome-icon">✈</div>
+    <h2>Welcome to PlanePin</h2>
+    <p id="welcome-tagline">The community map for aviation spotters.</p>
+    <p id="welcome-intro">PlanePin is where avgeeks share and discover aircraft sightings from around the world. Every pin is a real X post from a real spotter — browse the map to explore, or add your own spot in seconds.</p>
+    <div class="welcome-bullets">
+      <div class="welcome-bullet">
+        <span class="bullet-icon">🗺</span>
+        <div><strong>Browsing</strong> — click any pin on the map to see the original post, aircraft details, and nearby airports.</div>
+      </div>
+      <div class="welcome-bullet">
+        <span class="bullet-icon">📍</span>
+        <div><strong>Spotting</strong> — hit <strong>+ Drop a pin</strong>, paste your X post URL, and your sighting lands on the map. AI auto-detects the aircraft type and airport from your post text, or you can manually enter the aircraft type and airport code.</div>
+      </div>
+      <div class="welcome-bullet">
+        <span class="bullet-icon">✦</span>
+        <div><strong>Attribution</strong> — credit always stays with the original poster. Every pin links back to the source X post.</div>
+      </div>
+    </div>
+    <div id="welcome-suppress">
+      <label><input type="checkbox" id="dont-show-again" /> Don't show this again</label>
+    </div>
+    <button id="welcome-btn" onclick="closeWelcome()">Let's go ✈</button>
+  </div>
+</div>
+  
+  <div id="toast">PlanePin dropped! ✈</div>
 
 <script>
   const SUPABASE_URL = 'https://nwfgkingojvrprqcpmwu.supabase.co';
@@ -751,6 +798,21 @@
     document.getElementById('map-pin-area').textContent = `📍 Pin placed at ${droppedLat.toFixed(4)}, ${droppedLng.toFixed(4)}`;
   });
 
+  // Welcome modal
+  function showWelcome() {
+    if (localStorage.getItem('planepinWelcomeSeen') === 'true') return;
+    document.getElementById('welcome-overlay').classList.remove('hidden');
+  }
+
+  function closeWelcome() {
+    if (document.getElementById('dont-show-again').checked) {
+      localStorage.setItem('planepinWelcomeSeen', 'true');
+    }
+    document.getElementById('welcome-overlay').classList.add('hidden');
+  }
+
+  showWelcome();
+  
   loadPins();
 </script>
 </body>
