@@ -725,7 +725,7 @@
     const body = document.getElementById('profile-body');
     body.innerHTML = '<div class="lb-empty">Loading...</div>';
 
-    const userPins = allPins.filter(p => p.x_username === username)
+    const userPins = allPins.filter(p => (p.x_username || '').toLowerCase() === username.toLowerCase())
       .sort((a, b) => new Date(b.submitted_at) - new Date(a.submitted_at));
 
     if (userPins.length === 0) {
@@ -751,7 +751,7 @@
     const allCounts = {};
     allPins.forEach(p => { if (p.x_username) allCounts[p.x_username] = (allCounts[p.x_username] || 0) + 1; });
     const sorted = Object.entries(allCounts).sort((a, b) => b[1] - a[1]);
-    const rank = sorted.findIndex(([u]) => u === username) + 1;
+    const rank = sorted.findIndex(([u]) => u.toLowerCase() === username.toLowerCase()) + 1;
     const rankBadges = { 1: '🥇', 2: '🥈', 3: '🥉' };
     const badge = rankBadges[rank] || (rank <= 10 ? '🏅' : null);
 
