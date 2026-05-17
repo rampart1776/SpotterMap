@@ -697,6 +697,16 @@
       return;
     }
 
+  const rankClasses = ['gold', 'silver', 'bronze'];
+    body.innerHTML = sorted.map(([username, count], i) => `
+      <div class="lb-row">
+        <div class="lb-rank ${rankClasses[i] || ''}">${i + 1}</div>
+        <div class="lb-name"><a href="#" onclick="openProfilePanel('${username}'); return false;">@${username}</a></div>
+        <div class="lb-count">${count} pin${count !== 1 ? 's' : ''}</div>
+      </div>
+    `).join('');
+  }
+
   window.openProfilePanel = function(username) {
     document.getElementById('side-panel').classList.add('hidden');
     document.getElementById('leaderboard-panel').classList.add('hidden');
@@ -791,15 +801,7 @@
     openSidePanel(pin);
   }
     
-    const rankClasses = ['gold', 'silver', 'bronze'];
-    body.innerHTML = sorted.map(([username, count], i) => `
-      <div class="lb-row">
-        <div class="lb-rank ${rankClasses[i] || ''}">${i + 1}</div>
-        <div class="lb-name"><a href="#" onclick="openProfilePanel('${username}'); return false;">@${username}</a></div>
-        <div class="lb-count">${count} pin${count !== 1 ? 's' : ''}</div>
-      </div>
-    `).join('');
-  }
+   
 
  function shareToX() {
     if (!currentPin) return;
