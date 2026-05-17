@@ -697,7 +697,7 @@
       return;
     }
 
-  function openProfilePanel(username) {
+  window.openProfilePanel = function(username) {
     document.getElementById('side-panel').classList.add('hidden');
     document.getElementById('leaderboard-panel').classList.add('hidden');
     const panel = document.getElementById('profile-panel');
@@ -706,7 +706,7 @@
     history.pushState({ profileUser: username }, '', '/@' + username);
   }
 
-  function closeProfilePanel() {
+  window.closeProfilePanel = function() {
     document.getElementById('profile-panel').classList.add('hidden');
     history.pushState({}, '', '/');
   }
@@ -783,7 +783,7 @@
     `;
   }
 
-  function openPinFromProfile(pinId) {
+  window.openPinFromProfile = function(pinId) {
     const pin = allPins.find(p => p.id === pinId);
     if (!pin) return;
     document.getElementById('profile-panel').classList.add('hidden');
