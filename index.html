@@ -824,7 +824,7 @@ function handlePageLoad() {
       }
     } else if (pathname.startsWith('/@')) {
       const username = pathname.slice(2);
-      if (username) window.openProfilePanel(username);
+      if (username) setTimeout(() => window.openProfilePanel(username), 100);
     }
   }
   
