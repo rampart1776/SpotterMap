@@ -1,0 +1,21 @@
+# Dependencies
+node_modules/
+dist/
+build/
+
+# Environment variables
+.env
+.env.local
+
+# Assets & large files
+Assets/
+assets/
+
+# Logs and temp
+*.log
+.DS_Store
+Thumbs.db
+
+# Claude / AI artifacts
+claude-*
+*.tmp
