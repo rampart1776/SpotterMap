@@ -815,6 +815,7 @@
 
 function handlePageLoad() {
     const pathname = window.location.pathname;
+    console.log('handlePageLoad fired, pathname:', pathname);
     if (pathname.startsWith('/pin/')) {
       const pinId = pathname.slice(5);
       if (pinId) {
