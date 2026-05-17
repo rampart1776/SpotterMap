@@ -70,6 +70,145 @@
     .airport-row .dist { font-size: 11px; color: #666; }
     .icao-tag { font-size: 11px; background: #1a2e1a; color: #4ade80; padding: 2px 6px; border-radius: 3px; font-weight: 600; }
 
+    #profile-panel {
+  position: absolute;
+  top: 0; right: 0;
+  width: 340px;
+  height: 100%;
+  background: #1a1a2e;
+  z-index: 1000;
+  overflow-y: auto;
+  border-left: 1px solid #2a2a4a;
+  display: flex;
+  flex-direction: column;
+}
+#profile-panel.hidden { display: none; }
+#profile-header {
+  display: flex;
+  justify-content: flex-end;
+  padding: 12px 14px 0;
+}
+#profile-close {
+  background: none;
+  border: none;
+  color: #aaa;
+  font-size: 18px;
+  cursor: pointer;
+  line-height: 1;
+}
+#profile-body {
+  padding: 0 16px 24px;
+  flex: 1;
+}
+.profile-username {
+  font-size: 22px;
+  font-weight: 700;
+  color: #fff;
+  margin: 4px 0 2px;
+}
+.profile-username a {
+  color: #fff;
+  text-decoration: none;
+}
+.profile-username a:hover { text-decoration: underline; }
+.profile-stats-row {
+  display: flex;
+  gap: 16px;
+  margin: 12px 0;
+}
+.profile-stat {
+  text-align: center;
+  flex: 1;
+  background: #12122a;
+  border-radius: 8px;
+  padding: 10px 6px;
+}
+.profile-stat-num {
+  font-size: 22px;
+  font-weight: 700;
+  color: #4da6ff;
+}
+.profile-stat-label {
+  font-size: 11px;
+  color: #888;
+  margin-top: 2px;
+}
+.profile-section-title {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #666;
+  margin: 16px 0 8px;
+}
+.profile-aircraft-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.profile-aircraft-pill {
+  background: #12122a;
+  border: 1px solid #2a2a4a;
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-size: 13px;
+  color: #ccc;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.profile-aircraft-pill span {
+  color: #4da6ff;
+  font-weight: 600;
+}
+.profile-badge {
+  display: inline-block;
+  background: #12122a;
+  border: 1px solid #2a2a4a;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 13px;
+  color: #ccc;
+  margin-bottom: 4px;
+}
+.profile-badge .badge-icon { margin-right: 6px; }
+.profile-pins-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-top: 8px;
+}
+.profile-pin-card {
+  background: #12122a;
+  border: 1px solid #2a2a4a;
+  border-radius: 8px;
+  padding: 8px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.profile-pin-card:hover { border-color: #4da6ff; }
+.profile-pin-card .ppc-aircraft {
+  font-size: 12px;
+  font-weight: 600;
+  color: #4da6ff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.profile-pin-card .ppc-airport {
+  font-size: 11px;
+  color: #888;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.profile-pin-card .ppc-age {
+  font-size: 10px;
+  color: #555;
+  margin-top: 4px;
+}
+    
     #leaderboard-panel { width: 300px; background: #1a1d27; border-left: 1px solid #2a2d3a; display: flex; flex-direction: column; overflow-y: auto; }
     #leaderboard-panel.hidden { display: none; }
     #leaderboard-header { display: flex; align-items: center; justify-content: space-between; padding: 14px; border-bottom: 1px solid #2a2d3a; }
@@ -230,6 +369,15 @@
     </div>
   </div>
 
+<div id="profile-panel" class="hidden">
+  <div id="profile-header">
+    <button id="profile-close" onclick="closeProfilePanel()">✕</button>
+  </div>
+  <div id="profile-body">
+    <div class="lb-empty">Loading...</div>
+  </div>
+</div>
+  
   <div id="leaderboard-panel" class="hidden">
     <div id="leaderboard-header">
       <h3>🏆 Top spotters</h3>
@@ -383,7 +531,7 @@
     renderPins();
     updateStats();
     populateFilterDropdowns();
-    checkDeepLink();
+    handlePageLoad();
   }
 
   function updateStats() {
@@ -549,11 +697,105 @@
       return;
     }
 
+  function openProfilePanel(username) {
+    document.getElementById('side-panel').classList.add('hidden');
+    document.getElementById('leaderboard-panel').classList.add('hidden');
+    const panel = document.getElementById('profile-panel');
+    panel.classList.remove('hidden');
+    renderProfilePanel(username);
+    history.pushState({ profileUser: username }, '', '/@' + username);
+  }
+
+  function closeProfilePanel() {
+    document.getElementById('profile-panel').classList.add('hidden');
+    history.pushState({}, '', '/');
+  }
+
+  function renderProfilePanel(username) {
+    const body = document.getElementById('profile-body');
+    body.innerHTML = '<div class="lb-empty">Loading...</div>';
+
+    const userPins = allPins.filter(p => p.x_username === username)
+      .sort((a, b) => new Date(b.submitted_at) - new Date(a.submitted_at));
+
+    if (userPins.length === 0) {
+      body.innerHTML = '<div class="lb-empty">No pins found for @' + username + '</div>';
+      return;
+    }
+
+    // Stats
+    const total = userPins.length;
+    const firstDate = new Date(userPins[userPins.length - 1].submitted_at);
+    const lastDate = new Date(userPins[0].submitted_at);
+    const firstStr = firstDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+    const lastStr = lastDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+    // Top 3 aircraft
+    const acCounts = {};
+    userPins.forEach(p => {
+      if (p.aircraft_type) acCounts[p.aircraft_type] = (acCounts[p.aircraft_type] || 0) + 1;
+    });
+    const topAc = Object.entries(acCounts).sort((a, b) => b[1] - a[1]).slice(0, 3);
+
+    // Leaderboard rank (all time)
+    const allCounts = {};
+    allPins.forEach(p => { if (p.x_username) allCounts[p.x_username] = (allCounts[p.x_username] || 0) + 1; });
+    const sorted = Object.entries(allCounts).sort((a, b) => b[1] - a[1]);
+    const rank = sorted.findIndex(([u]) => u === username) + 1;
+    const rankBadges = { 1: '🥇', 2: '🥈', 3: '🥉' };
+    const badge = rankBadges[rank] || (rank <= 10 ? '🏅' : null);
+
+    // Pin cards HTML
+    const cardHTML = userPins.map(p => {
+      const age = getPinAge(p);
+      const ageStr = age < 1 ? 'Today' : age < 2 ? 'Yesterday' : Math.floor(age) + 'd ago';
+      return `<div class="profile-pin-card" onclick="openPinFromProfile('${p.id}')">
+        <div class="ppc-aircraft">${p.aircraft_type || '—'}</div>
+        <div class="ppc-airport">${p.airport_icao || '—'}</div>
+        <div class="ppc-age">${ageStr}</div>
+      </div>`;
+    }).join('');
+
+    body.innerHTML = `
+      <div class="profile-username"><a href="https://x.com/${username}" target="_blank">@${username}</a></div>
+      <div class="profile-stats-row">
+        <div class="profile-stat">
+          <div class="profile-stat-num">${total}</div>
+          <div class="profile-stat-label">Total pins</div>
+        </div>
+        <div class="profile-stat">
+          <div class="profile-stat-num">#${rank}</div>
+          <div class="profile-stat-label">All-time rank</div>
+        </div>
+        <div class="profile-stat">
+          <div class="profile-stat-num">${firstStr}</div>
+          <div class="profile-stat-label">First spot</div>
+        </div>
+      </div>
+      ${badge ? `<div class="profile-badge"><span class="badge-icon">${badge}</span>${rank <= 3 ? ['Top spotter', 'Silver spotter', 'Bronze spotter'][rank-1] : 'Top 10 spotter'}</div>` : ''}
+      ${topAc.length ? `
+        <div class="profile-section-title">Top aircraft</div>
+        <div class="profile-aircraft-row">
+          ${topAc.map(([type, count]) => `<div class="profile-aircraft-pill">${type} <span>${count}</span></div>`).join('')}
+        </div>` : ''}
+      <div class="profile-section-title">Pins · latest first</div>
+      <div class="profile-pins-grid">${cardHTML}</div>
+    `;
+  }
+
+  function openPinFromProfile(pinId) {
+    const pin = allPins.find(p => p.id === pinId);
+    if (!pin) return;
+    document.getElementById('profile-panel').classList.add('hidden');
+    map.setView([pin.lat, pin.lng], 10);
+    openSidePanel(pin);
+  }
+    
     const rankClasses = ['gold', 'silver', 'bronze'];
     body.innerHTML = sorted.map(([username, count], i) => `
       <div class="lb-row">
         <div class="lb-rank ${rankClasses[i] || ''}">${i + 1}</div>
-        <div class="lb-name"><a href="https://x.com/${username}" target="_blank">@${username}</a></div>
+        <div class="lb-name"><a href="#" onclick="openProfilePanel('${username}'); return false;">@${username}</a></div>
         <div class="lb-count">${count} pin${count !== 1 ? 's' : ''}</div>
       </div>
     `).join('');
@@ -571,6 +813,20 @@
     window.open('https://x.com/intent/tweet?text=' + encodeURIComponent(text), '_blank');
   }
 
+function handlePageLoad() {
+    const pathname = window.location.pathname;
+    if (pathname.startsWith('/pin/')) {
+      const pinId = pathname.slice(5);
+      if (pinId) {
+        const pin = allPins.find(p => p.id === pinId);
+        if (pin) openPanel(pin, true);
+      }
+    } else if (pathname.startsWith('/@')) {
+      const username = pathname.slice(2);
+      if (username) openProfilePanel(username);
+    }
+  }
+  
   function openPanel(pin, fromDeepLink = false) {
     currentPin = pin;
     document.getElementById('leaderboard-panel').classList.add('hidden');
@@ -585,8 +841,10 @@
     }
     document.getElementById('panel-title').textContent =
       (pin.airport_icao ? pin.airport_icao + ' · ' : '') + (pin.airline || 'Spotted aircraft');
-    document.getElementById('panel-subtitle').textContent =
-      '@' + (pin.x_username || 'unknown') + ' · ' + new Date(pin.submitted_at).toLocaleDateString();
+    const username = pin.x_username || 'unknown';
+    const dateStr = new Date(pin.submitted_at).toLocaleDateString();
+    const subtitleEl = document.getElementById('panel-subtitle');
+    subtitleEl.innerHTML = `<a href="#" onclick="openProfilePanel('${username}'); return false;" style="color:inherit;text-decoration:underline;text-decoration-color:rgba(255,255,255,0.3)">@${username}</a> · ${dateStr}`;
 
     const embedContainer = document.getElementById('embed-container');
     embedContainer.innerHTML = '';
@@ -931,20 +1189,6 @@
     renderPins();
   }
 
-// Deep link handling
-  function checkDeepLink() {
-    const match = window.location.pathname.match(/^\/pin\/([a-f0-9-]+)$/i);
-    if (!match) return;
-    const pinId = match[1];
-    const pin = allPins.find(p => p.id === pinId);
-    if (!pin) {
-      console.warn('Pin not found:', pinId);
-      return;
-    }
-    // Zoom to region first, then open panel
-    map.setView([pin.lat, pin.lng], 6, { animate: false });
-    openPanel(pin, true);
-  }
 
   // Handle browser back/forward
   window.addEventListener('popstate', (e) => {
